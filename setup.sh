@@ -623,7 +623,7 @@ if command -v swaks > /dev/null; then
           --auth-user "${EMAIL_USER}" \
           --auth-password "${EMAIL_PASSWORD}" \
           --h-Subject "Urgent: Security Alert - Immediate Action Required" \
-          --html-body phishing_site/phishing_email_preview.html
+          --body "$(cat phishing_site/phishing_email_preview.html)"
           
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}[SUCCESS]${NC} Email sent successfully to ${TARGET_EMAIL}"
