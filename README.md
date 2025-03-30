@@ -1,129 +1,149 @@
-# Email Phishing Lab: Mac + Kali VM Setup
+# Phishing Lab Exercise
 
-This phishing lab is designed to run the server infrastructure on your **Kali VM** while allowing you to view and take screenshots easily on your **Mac** for better performance and lab submission.
+This repository contains all necessary tools and scripts to complete the email phishing lab exercise for the Lumon Industries cyber range.
 
-## What This Lab Does
+## Overview
 
-This lab automates the setup of:
+This lab simulates a common phishing attack where an attacker:
+1. Creates a fake login page that looks identical to a legitimate site
+2. Sends a convincing email with a link to the fake page
+3. Captures credentials when users enter them on the fake page
 
-1. A phishing website on your Kali VM that mimics a login page
-2. A credential-capturing system that logs any entered usernames/passwords
-3. HTML email templates for sending through the Lumon Industries mail server
-4. Convenient browser-based viewing pages for screenshots on your Mac
+## Project Structure
 
-## System Requirements
+- `setup.sh` - Main setup script to configure everything automatically
+- `phishing_site/` - Directory containing the cloned website and capture script
+- `html_email_template.html` - Template for the HTML phishing email
+- `send_email.sh` - Script to send the phishing email
+- `view_credentials.sh` - Script to view captured credentials
+- `.env.example` - Example configuration file (copy to `.env` and modify)
 
-- **Kali Linux VM**: Where all server components run
-- **Mac**: For viewing and taking screenshots of the components
-- Both machines must be on the same network
+## Step-by-Step Instructions
 
-## Quick Setup Guide
+**Website Cloning:** You can now clone real websites by passing a URL: `./setup.sh https://example.com`
 
-### On Kali VM:
+### 1. Initial Setup
 
-1. Download all files to your Kali VM
-2. Make the setup script executable:
-   ```bash
+1. Copy the example environment file and edit it with your credentials:
+   ```
+   cp .env.example .env
+   nano .env
+   ```
+   Fill in your:
+   - Email username (based on your SSH port)
+   - Email password
+   - Kali VM IP address
+   - Target email (or leave blank to send to yourself)
+
+2. Make the setup script executable and run it:
+   ```
    chmod +x setup.sh
-   ```
-3. Run the setup script:
-   ```bash
+   
+   # Option 1: Use the default Lumon login page
    ./setup.sh
+   
+   # Option 2: Clone a real website
+   ./setup.sh https://target-website.com
    ```
-4. Start the web server:
-   ```bash
+   
+   This script will:
+   - Install any necessary dependencies
+   - Set up the phishing website (default or cloned from URL)
+   - Configure email templates with your server IP
+   - Create scripts for monitoring and sending
+
+### 2. Running the Phishing Website
+
+1. Start the web server to host the phishing site:
+   ```
    cd phishing_site
-   ./start_server.sh
+   sudo ./start_server.sh
+   ```
+   This starts a PHP server on port 80 to host the phishing page.
+
+2. Keep this terminal window open while the web server runs. Open a new terminal for the next steps.
+
+### 3. Sending the Phishing Email
+
+1. In a new terminal, send the phishing email:
+   ```
+   ./send_email.sh
    ```
 
-### On Mac:
+2. The script will use the credentials from your `.env` file to send an HTML email through the Lumon mail server.
 
-1. Get the HTML access file from Kali using one of these methods:
+3. The email will contain a "Verify Account" button that links to your phishing site.
 
-   **Option 1: Use a temporary web server**
-   ```bash
-   # On Kali VM
-   cd mac_access
-   python3 -m http.server 8000
+### 4. Capturing Credentials
+
+1. In another terminal window, monitor for captured credentials:
    ```
-   Then on your Mac, browse to `http://KALI_IP:8000/open_on_mac.html` and save the page.
-
-   **Option 2: Use secure copy (SCP)**
-   ```bash
-   # On Mac Terminal
-   scp kali@KALI_IP:/path/to/lab/mac_access/open_on_mac.html ~/Desktop/
+   ./view_credentials.sh
    ```
 
-2. Open the saved HTML file on your Mac
-3. Use the buttons to access and screenshot each component
+2. When someone clicks the link in your email and enters credentials, they will be captured and displayed in this terminal.
 
-## What Runs Where
+3. All captured credentials are also stored in `phishing_site/captured_credentials.txt` for your reference.
 
-### On Kali VM (Infrastructure):
-- Web server hosting the phishing site
-- PHP scripts that capture credentials
-- Email sending functionality
-- Credential monitoring
+### 5. Understanding How It Works
 
-### On Mac (Viewing & Screenshots):
-- Phishing website preview
-- Email template preview
-- Captured credentials viewer
-- Taking screenshots for lab report
+#### The Phishing Website
+- When using the default template: A pre-designed Lumon Industries login page
+- When cloning a website: A replica of the target website with forms modified to capture credentials
+- All credentials are processed by `phishing_site/credentials.php`
+- The PHP script is designed to capture credentials from various form field names
+- After capturing credentials, users are redirected to a legitimate site to avoid suspicion
 
-## Step-by-Step Lab Completion
+#### The Phishing Email
+- Uses HTML formatting to appear legitimate
+- Contains official-looking branding and urgent language
+- Includes a button that links to your phishing site (using your Kali VM's IP)
+- Uses social engineering tactics to create urgency (security alert, account verification)
 
-1. **Set Up Infrastructure (Kali VM)**
-   ```bash
-   ./setup.sh
-   cd phishing_site
-   ./start_server.sh
-   ```
+#### Credential Harvesting
+- The form on the fake page submits to a PHP script
+- The script captures:
+  - Username/email
+  - Password
+  - IP address
+  - User agent (browser info)
+  - Timestamp
+  - All form fields submitted (for forms with non-standard field names)
+- All data is logged to a text file and can be monitored in real-time
 
-2. **Access Viewing Links (Mac)**
-   - Get the `open_on_mac.html` file using one of the methods above
-   - Open it in your browser
-   - Verify you can see the phishing site through the links
+## Website Cloning Features
 
-3. **Send Phishing Email (Kali VM)**
-   ```bash
-   # In a new terminal on Kali
-   ./send_phishing_email.sh
-   ```
-   - Enter your SSH port number when prompted (for email username)
-   - Enter your password
-   - Enter target email (or leave blank to send to yourself)
+When you use the URL cloning option:
 
-4. **Test and Capture Credentials (Kali VM + Mac)**
-   - Click the link in the email preview on your Mac
-   - Enter test credentials on the phishing site
-   - In a new terminal on Kali, monitor for captured credentials:
-     ```bash
-     cd phishing_site
-     ./monitor_credentials.sh
-     ```
-   - Refresh the credentials page on your Mac to see and screenshot the captured data
+1. The script will download the content of the target website
+2. It will automatically modify any forms to submit to your credential capture script
+3. The script attempts to detect various login form fields, even if they use non-standard names
+4. If cloning fails, it will fall back to the default login page
 
-5. **Complete Lab Report**
-   - Use the screenshots taken on your Mac
-   - Fill in the lab report template
-   - Include analysis of the phishing technique
+Best practices for website cloning:
+- Target specific login pages rather than home pages
+- Choose simpler websites without complex JavaScript-based forms
+- You may need to manually adjust the cloned files for more complex sites
 
-## Important Files
+## Lab Report Tips
 
-- `setup.sh`: Main setup script to run on Kali
-- `phishing_site/`: Directory containing the phishing website and capture scripts
-- `mac_access/open_on_mac.html`: HTML file with links for viewing on Mac
-- `send_phishing_email.sh`: Script to send phishing emails
-- `lab_report_template.md`: Template for your lab submission
+When completing your lab report, include:
 
-## Troubleshooting
+1. **Screenshots of**:
+   - Your phishing email as seen by the recipient
+   - Your cloned phishing website
+   - Captured credentials
 
-- **Can't access Kali from Mac**: Check that both machines are on the same network
-- **Web server won't start**: Install required packages with `sudo apt update && sudo apt install php`
-- **Email sending fails**: Check your VM's connectivity to the mail server in the lab environment
-- **No credentials captured**: Make sure form fields on the phishing page match what the capture script expects
+2. **Description of your approach**:
+   - Social engineering tactics used in your email
+   - Technical setup details
+   - Any challenges encountered and how you solved them
+
+3. **Analysis of effectiveness**:
+   - Why the phishing attempt might succeed
+   - How it could be improved
+   - How organizations can protect against such attacks
 
 ## Security Notice
 
-This lab is for educational purposes only. The techniques should only be applied within authorized environments and the provided cyber range. Unauthorized use of these techniques is illegal and unethical. 
+This lab is for educational purposes only. The techniques demonstrated should only be used in authorized environments such as the provided cyber range. Unauthorized use of these techniques against real systems or individuals is illegal and unethical. 
