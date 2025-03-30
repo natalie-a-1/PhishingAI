@@ -12,16 +12,42 @@ This lab includes:
 
 ## Setup
 
+The easiest way to set up everything is to use the provided setup script:
+
+```
+chmod +x setup.sh
+./setup.sh
+```
+
+Alternatively, you can set up manually:
+
 1. Clone this repository to your local machine
 2. Create a `.env` file by copying `.env.example` and filling in your details
 3. Make the scripts executable:
    ```
-   chmod +x send_email.sh host_phishing_site.sh
+   chmod +x send_email.sh host_phishing_site.sh view_credentials.sh
    ```
 
 ## Using the Tools
 
-### 1. Sending a Phishing Email
+### 1. Starting the Phishing Website
+
+```
+sudo ./host_phishing_site.sh [url_to_clone]
+```
+
+**IMPORTANT**: It's recommended to run the script with `sudo` to use port 80. If you run without sudo, the script will use port 8080 instead, and the emails will be updated accordingly.
+
+Examples:
+```
+# Host a default login page on port 80
+sudo ./host_phishing_site.sh
+
+# Clone and host Microsoft login page on port 80
+sudo ./host_phishing_site.sh https://login.microsoft.com
+```
+
+### 2. Sending a Phishing Email
 
 ```
 ./send_email.sh [options]
@@ -49,30 +75,30 @@ Examples:
 ./send_email.sh -w https://github.com/login
 ```
 
-### 2. Hosting a Phishing Website
-
-```
-./host_phishing_site.sh [url_to_clone]
-```
-
-Example:
-```
-# Host a default login page
-./host_phishing_site.sh
-
-# Clone and host Microsoft login page
-./host_phishing_site.sh https://login.microsoft.com
-```
-
 ### 3. Monitoring Captured Credentials
 
 The captured credentials are stored in `phishing_site/credentials.txt`. You can view them in real-time by:
 
 ```
-tail -f phishing_site/credentials.txt
+./view_credentials.sh
 ```
 
 A more detailed log is also available at `phishing_site/detailed_capture.log`.
+
+## Port Handling
+
+By default, the phishing site will try to run on port 80, which requires root privileges. If you don't run with sudo, it will fall back to port 8080. The system will:
+
+1. Automatically detect the port being used
+2. Update the email links to include the port if needed
+3. Ensure the cloned website resources load correctly
+
+If you're having issues with the email links not matching the hosted site, make sure to:
+
+1. First start the phishing server (`host_phishing_site.sh`)
+2. Then send the email (`send_email.sh`)
+
+This ensures the email script knows which port the server is using.
 
 ## Key Features
 

